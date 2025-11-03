@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="qu"> 
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Aprende Quechua — Básico</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    
+    #chat-button {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: #007bff;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+      font-size: 22px;
+      z-index: 10000;
+    }
+    #chat-container {
+      position: fixed;
+      right: 20px;
+      bottom: 90px;
+      width: 340px;
+      max-height: 520px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 10000;
+      font-family: inherit;
+    }
+    #chat-container.hidden { display: none; }
+    #chat-header {
+      background: #007bff;
+      color: #fff;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    #chat-messages {
+      padding: 12px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: #f7f9fc;
+    }
+    .msg { padding: 10px 12px; border-radius: 12px; max-width: 78%; word-wrap: break-word; }
+    .msg.user { background: #007bff; color: #fff; align-self: flex-end; border-bottom-right-radius: 6px; }
+    .msg.bot  { background: #e9ecef; color: #000; align-self: flex-start; border-bottom-left-radius: 6px; }
+    #chat-input-wrap { padding: 10px; border-top: 1px solid #eee; display: flex; gap: 8px; }
+    #chat-input { flex: 1; padding: 10px 12px; border-radius: 20px; border: 1px solid #ddd; outline: none; }
+    #send-btn { background: #007bff; color: #fff; border: none; padding: 0 12px; border-radius: 8px; cursor: pointer; }
+    @media (max-width: 480px) {
+      #chat-container { right: 12px; left: 12px; width: auto; bottom: 80px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <h1>Aprende Quechua</h1>
+    </div>
+    <nav>
+      <a href="index.html" class="nav-btn">Inicio</a>
+      <a href="vocabulario.html" class="nav-btn">Vocabulario</a>
+      <a href="lecciones.html" class="nav-btn">Lecciones</a>
+      <a href="quiz.html" class="nav-btn">Quiz</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section id="home" class="page active">
+      <h2>Bienvenido a Quechua Básico</h2>
+      <div class="welcome-cards">
+        <div class="card">
+          <h3>¿Por qué aprender Quechua?</h3>
+          <ul>
+            <li>Es el idioma de nuestros ancestros</li>
+            <li>Millones de personas lo hablan en Sudamérica</li>
+            <li>Conexión con nuestra cultura</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Secciones disponibles</h3>
+          <ul>
+            <li><a href="vocabulario.html">Vocabulario - Aprende palabras nuevas</a></li>
+            <li><a href="lecciones.html">Lecciones - Aprende frases y gramática</a></li>
+            <li><a href="quiz.html">Quiz - Pon a prueba tus conocimientos</a></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  
+  <button id="chat-button" aria-label="Abrir chat">💬</button>
+  <div id="chat-container" class="hidden" role="dialog" aria-label="Chatbot">
+    <div id="chat-header">
+      <div>Quechua Bot</div>
+      <button id="close-chat" aria-label="Cerrar" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer">✕</button>
+    </div>
+    <div id="chat-messages" aria-live="polite"></div>
+    <div id="chat-input-wrap">
+      <input id="chat-input" type="text" placeholder="Pregunta sobre quechua..." aria-label="Mensaje"/>
+      <button id="send-btn" aria-label="Enviar">Enviar</button>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+    
+      const API_URL = 'http://localhost:3000/chat';
+      let isServerActive = false;
+
+      
+      const btn = document.getElementById('chat-button');
+      const container = document.getElementById('chat-container');
+      const closeBtn = document.getElementById('close-chat');
+      const sendBtn = document.getElementById('send-btn');
+      const input = document.getElementById('chat-input');
+      const messagesEl = document.getElementById('chat-messages');
+
+      
+      btn.addEventListener('click', async () => {
+        container.classList.toggle('hidden');
+        if (!container.classList.contains('hidden')) {
+          input.focus();
+          if (!isServerActive) {
+            try {
+              await fetch(API_URL);
+              isServerActive = true;
+            } catch (error) {
+              addMessage('El servidor no está activo. Por favor inicia node server.js y ollama run llama3', false);
+            }
+          }
+        }
+      });
+
+      closeBtn.addEventListener('click', () => container.classList.add('hidden'));
+      sendBtn.addEventListener('click', sendMessage);
+      input.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+      async function sendMessage() {
+        const text = input.value.trim();
+        if (!text) return;
+        
+        addMessage(text, true);
+        input.value = '';
+        input.focus();
+        
+        const loadingMsg = addMessage('Pensando...', false);
+        
+        try {
+          const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ prompt: text })
+          });
+
+          loadingMsg.remove();
+
+          if (!response.ok) {
+            throw new Error(`Error ${response.status}`);
+          }
+
+          const data = await response.text();
+          addMessage(data, false);
+          
+        } catch (error) {
+          console.error('Error:', error);
+          loadingMsg.remove();
+          addMessage('Error de conexión. Verifica:\n1. ¿Ejecutaste node server.js?\n2. ¿Iniciaste ollama run llama3?', false);
+        }
+      }
+
+      function addMessage(text, fromUser = false) {
+        const div = document.createElement('div');
+        div.className = 'msg ' + (fromUser ? 'user' : 'bot');
+        div.textContent = text;
+        messagesEl.appendChild(div);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+        return div;
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="qu">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Quiz - Aprende Quechua</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <h1>Quiz de Quechua</h1>
+    <nav>
+      <a href="index.html" class="nav-btn">Inicio</a>
+      <a href="vocabulario.html" class="nav-btn">Vocabulario</a>
+      <a href="lecciones.html" class="nav-btn">Lecciones</a>
+      <a href="quiz.html" class="nav-btn active">Quiz</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="quiz-container">
+      <div class="quiz-intro" id="quiz-intro">
+        <h2>Quiz de Quechua</h2>
+        <p>Tienes 5 minutos para responder 15 preguntas</p>
+        <button id="start-quiz" class="btn primary">Empezar Quiz</button>
+      </div>
+
+      <div id="quiz-game" class="hidden">
+        <div class="quiz-header">
+          <div class="timer">
+            <span id="minutes">05</span>:<span id="seconds">00</span>
+          </div>
+          <div class="progress">
+            Pregunta <span id="current-question">0</span>/15
+          </div>
+        </div>
+
+        <div class="question-container">
+          <p id="question-text" class="question-text"></p>
+          <div class="options-container">
+
+          </div>
+        </div>
+      </div>
+
+      <div id="quiz-result" class="hidden">
+        <h3>Resultados</h3>
+        <p>Respondiste correctamente: <span id="correct-answers">0</span>/15</p>
+        <button id="retry-quiz" class="btn primary">Intentar de nuevo</button>
+      </div>
+    </section>
+  </main>
+  <script src="quiz.js"></script>
+</body>
+</html>

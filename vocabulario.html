@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="qu">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Vocabulario - Aprende Quechua</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    
+    #chat-button {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: #007bff;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+      font-size: 22px;
+      z-index: 10000;
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <h1>Vocabulario Quechua</h1>
+    <nav>
+      <a href="index.html" class="nav-btn">Inicio</a>
+      <a href="vocabulario.html" class="nav-btn active">Vocabulario</a>
+      <a href="lecciones.html" class="nav-btn">Lecciones</a>
+      <a href="quiz.html" class="nav-btn">Quiz</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="vocab-section">
+      <h2>Palabras Básicas</h2>
+      <div class="vocab-categories">
+        <div class="vocab-category">
+          <h3>Saludos</h3>
+          <div class="vocab-grid">
+            <div class="vocab-item">
+              <span class="quechua">Rimaykullayki</span>
+              <span class="spanish"> (Hola) </span>
+              <button class="play-audio" data-audio="rimaykullayki"> play </button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Allillanchu</span>
+              <span class="spanish"> (Como estas?)</span>
+              <button class="play-audio" data-audio="Allillanchu"> play </button>
+            </div>
+            <div class="vocab vocab-item">
+              <span class="quechua">Allinmi</span>
+              <span class="spanish"> (Bien) </span>
+              <button class="play-audio" data-audio="Allinmi"> play</button>
+            </div>
+            <h3>Los Números</h3>
+            <div class="vocab-item">
+              <span class="quechua">Huk</span>
+              <span class="spanish"> (Uno) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Iskay</span>
+              <span class="spanish"> (Dos) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Kimsa </span>
+              <span class="spanish"> (Tres) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Tawa </span>
+              <span class="spanish"> (Cuatro) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Pichqa </span>
+              <span class="spanish"> (Cinco) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div><div class="vocab-item">
+              <span class="quechua">Suqta </span>
+              <span class="spanish"> (Seis) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Qamchis </span>
+              <span class="spanish"> (Siete) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Pusaq</span>
+              <span class="spanish"> (Ocho) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Isqun </span>
+              <span class="spanish"> (Nueve) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Chunka </span>
+              <span class="spanish"> (Diez) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <h3>Familia</h3>
+            <div class="vocab-item">
+              <span class="quechua">Tayta</span>
+              <span class="spanish"> (Padre) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Mama</span>
+              <span class="spanish"> (Madre) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Wawqi</span>
+              <span class="spanish"> (Hermano) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <h3>Animales</h3>
+            <div class="vocab-item">
+              <span class="quechua">Allqu</span>
+              <span class="spanish"> (Perro) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Michi</span>
+              <span class="spanish"> (Gato) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Kuntur </span>
+              <span class="spanish"> (Cóndor) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <h3>Colores</h3>
+            <div class="vocab-item">
+              <span class="quechua">Puka</span>
+              <span class="spanish"> (Rojo) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Yana</span>
+              <span class="spanish"> (Negro) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Yuraq</span>
+              <span class="spanish"> (Blanco) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <h3>Comida</h3>
+            <div class="vocab-item">
+              <span class="quechua">Mikhuna</span>
+              <span class="spanish"> (Comida) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Papa</span>
+              <span class="spanish"> (Papa) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Sara</span>
+              <span class="spanish"> (Maíz) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <h3>Clima</h3>
+            <div class="vocab-item">
+              <span class="quechua">Rupay</span>
+              <span class="spanish"> (Sol/Calor) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Para</span>
+              <span class="spanish"> (Lluvia) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Chiri</span>
+              <span class="spanish"> (Frío) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <h3>Cuerpo Humano</h3>
+            <div class="vocab-item">
+              <span class="quechua">Uma</span>
+              <span class="spanish"> (Cabeza) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Ñawi</span>
+              <span class="spanish"> (Ojo) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Simi</span>
+              <span class="spanish"> (Boca) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <h3>Verbos Básicos</h3>
+            <div class="vocab-item">
+              <span class="quechua">Mikuy</span>
+              <span class="spanish"> (Comer) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Puñuy</span>
+              <span class="spanish"> (Dormir) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Puriy</span>
+              <span class="spanish"> (Caminar) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <h3>Direcciones</h3>
+            <div class="vocab-item">
+              <span class="quechua">Hanan</span>
+              <span class="spanish"> (Arriba) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Uray</span>
+              <span class="spanish"> (Abajo) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Qhipa</span>
+              <span class="spanish"> (Atrás) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <h3>Tiempo</h3>
+            <div class="vocab-item">
+              <span class="quechua">Kunan</span>
+              <span class="spanish"> (Ahora) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Paqarin</span>
+              <span class="spanish"> (Mañana) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Qayna</span>
+              <span class="spanish"> (Ayer) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <h3>Frases Útiles</h3>
+            <div class="vocab-item">
+              <span class="quechua">Sulpayki</span>
+              <span class="spanish"> (Gracias) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Ama ñishaychu</span>
+              <span class="spanish"> (De nada) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Tupananchiskama</span>
+              <span class="spanish"> (Hasta luego) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <h3>Naturaleza</h3>
+            <div class="vocab-item">
+              <span class="quechua">Mayu</span>
+              <span class="spanish"> (Río) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Urqu</span>
+              <span class="spanish"> (Montaña) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Sachakuna</span>
+              <span class="spanish"> (Árboles) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <h3>Pronombres</h3>
+            <div class="vocab-item">
+              <span class="quechua">Ñuqa</span>
+              <span class="spanish"> (Yo) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Qam</span>
+              <span class="spanish"> (Tú) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Pay</span>
+              <span class="spanish"> (Él/Ella) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <h3>Las Estaciones</h3>
+            <div class="vocab-item">
+              <span class="quechua">Paukar waray mit'a</span>
+              <span class="spanish"> (Primavera) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Poqoy mit'a</span>
+              <span class="spanish"> (Verano) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Aparkilla mit'a</span>
+              <span class="spanish"> (Otoño) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+            <div class="vocab-item">
+              <span class="quechua">Chirau mit'a</span>
+              <span class="spanish"> (Invierno) </span>
+              <button class="play-audio" data-audio=""> Play</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script src="script.js"></script>
+  <script src="chatbot.js"></script>
+</body>
+</html>
