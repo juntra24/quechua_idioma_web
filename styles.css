@@ -1,0 +1,287 @@
+:root {
+  --bg: #ffffff;
+  --card: #ffffff;
+  --accent: #e31837; /* rojo principal */
+  --text: #1f1f1f;
+  --muted: #6b6b6b;
+  --shadow: 0 6px 18px rgba(227,24,55,0.08);
+  font-family: 'Poppins', sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.site-header {
+  background: var(--card);
+  padding: 1rem 1.5rem;
+  box-shadow: 0 2px 6px rgba(15,23,42,0.04);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.site-header h1 {
+  color: var(--accent);
+  font-weight: 800;
+  margin: 0;
+}
+
+nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.nav-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-weight: 700;
+  box-shadow: 0 8px 20px rgba(227,24,55,0.12);
+  transition: all 0.16s ease;
+}
+
+.nav-btn:hover {
+  background: rgba(255,255,255,0.1);
+  transform: translateY(-2px);
+}
+
+
+.page-content {
+  max-width: 1100px;
+  margin: 2rem auto;
+  padding: 1rem;
+  display: block;
+  gap: 1rem;
+}
+
+.card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  transition: transform 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.vocab-item {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  transition: all 0.3s ease;
+}
+
+.vocab-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+}
+
+.word {
+  font-weight: 600;
+  font-size: 1.2rem;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+
+.translation {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+
+.controls {
+  margin-top: 1.5rem;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 50px;
+  border: none;
+  background: var(--bg);
+  color: var(--text);
+  font-weight: 500;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.btn.primary {
+  background: var(--accent);
+  color: white;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+
+.quiz-container {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 18px;
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow: 0 8px 20px rgba(2,6,23,0.05);
+}
+
+.quiz-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--bg);
+}
+
+.timer {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--accent);
+}
+
+.question-container {
+  margin-bottom: 2rem;
+}
+
+.question-text {
+  font-size: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.options-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.option-btn {
+  padding: 1rem;
+  background: var(--bg);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: left;
+  font-size: 1rem;
+}
+
+.option-btn:hover {
+  background: var(--card);
+  border-color: var(--accent);
+}
+
+.option-btn.correct {
+  background: #4CAF50;
+  color: white;
+}
+
+.option-btn.wrong {
+  background: #f44336;
+  color: white;
+}
+
+#start-quiz {
+  font-size: 1.2rem;
+  padding: 1rem 2rem;
+}
+
+.progress {
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.play-audio {
+ font-weight: bold;
+ border-radius: 10px;
+ background-color: #e31837;
+ color: white;
+}
+
+.return-footer {
+  max-width: 1100px;
+  margin: 18px auto 48px;
+  display:flex;
+  justify-content:center;
+}
+.return-btn {
+  display:inline-block;
+  padding: 12px 20px;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #fff;
+  font-weight:700;
+  text-decoration:none;
+  box-shadow: 0 8px 20px rgba(11,116,255,0.12);
+}
+
+/* Slight visual tweaks for vocab items and lessons */
+.vocab-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-top:12px; }
+.vocab-item { padding:12px; border-radius:10px; background:#fff; box-shadow: 0 6px 14px rgba(2,6,23,0.04); }
+
+/* header - mantener claro y aportar acentos rojos en botones */
+.site-header {
+  background: var(--card);
+  padding: 1rem 1.5rem;
+  box-shadow: 0 2px 6px rgba(15,23,42,0.04);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.site-header h1 { color: var(--accent); font-weight:800; }
+
+/* botones principales resaltados en rojo */
+.nav-btn, .btn.primary, .return-btn, .send-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-weight:700;
+  box-shadow: 0 8px 20px rgba(227,24,55,0.12);
+}
+
+/* tarjetas y fondo */
+.content-card, .card, .vocab-item, .lesson-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+/* texto */
+body { background: var(--bg); color: var(--text); }
+
+/* links y acentos secundarios */
+a { color: var(--accent); text-decoration: none; }
+
+/* inputs y campos */
+input, textarea {
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+/* pequeñas adaptaciones responsivas (se mantiene el resto) */
+@media (max-width: 768px) {
+  .site-header { padding: 0.8rem 1rem; flex-direction:column; gap:8px; align-items:flex-start; }
+  .page-content { padding: 0 12px; }
+}

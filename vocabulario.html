@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="qu">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Vocabulario - Aprende Quechua</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <h1>Vocabulario Quechua</h1>
+  </header>
+
+  <main class="page-content">
+    <div style="display:flex;gap:20px;align-items:flex-start;">
+      <!-- SIDEBAR -->
+      <aside style="width:260px;">
+        <div class="content-card">
+          <h3 style="margin-top:0;margin-bottom:12px">Categorías</h3>
+          <div id="vocab-categories" style="display:flex;flex-direction:column;gap:8px">
+            <!-- botones generados por JS -->
+          </div>
+        </div>
+      </aside>
+
+      <!-- CONTENT -->
+      <section id="vocab-content" class="content-card" style="flex:1;min-height:320px;">
+        <h2 id="vocab-title">Selecciona una categoría</h2>
+        <p id="vocab-desc" style="color:var(--muted)">Haz clic en una categoría a la izquierda para ver las palabras.</p>
+        <div id="vocab-list" class="vocab-grid" style="margin-top:12px">
+          <!-- palabras generadas por JS -->
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div class="return-footer">
+    <a class="return-btn" href="dashboard.html">Volver</a>
+  </div>
+
+  <script>
+    // Datos agrupados por categoría (texto + items)
+    const VOCAB = {
+      "Saludos": {
+        desc: "Los saludos más comunes.",
+        items: [
+          { q: "Rimaykullayki", s: "Hola" },
+          { q: "Allillanchu", s: "¿Cómo estás?" },
+          { q: "Allinmi", s: "Bien" }
+        ]
+      },
+      "Números": {
+        desc: "Números básicos.",
+        items: [
+          { q: "Huk", s: "Uno" }, { q: "Iskay", s: "Dos" }, { q: "Kimsa", s: "Tres" },
+          { q: "Tawa", s: "Cuatro" }, { q: "Pichqa", s: "Cinco" }, { q: "Suqta", s: "Seis" },
+          { q: "Qamchis", s: "Siete" }, { q: "Pusaq", s: "Ocho" }, { q: "Isqun", s: "Nueve" },
+          { q: "Chunka", s: "Diez" }
+        ]
+      },
+      "Familia": {
+        desc: "Miembros de la familia.",
+        items: [
+          { q: "Tayta", s: "Padre" }, { q: "Mama", s: "Madre" }, { q: "Wawqi", s: "Hermano" }
+        ]
+      },
+      "Animales": {
+        desc: "Animales comunes.",
+        items: [
+          { q: "Allqu", s: "Perro" }, { q: "Michi", s: "Gato" }, { q: "Kuntur", s: "Cóndor" }
+        ]
+      },
+      "Colores": {
+        desc: "Colores básicos.",
+        items: [
+          { q: "Puka", s: "Rojo" }, { q: "Yana", s: "Negro" }, { q: "Yuraq", s: "Blanco" }
+        ]
+      },
+      "Comida": {
+        desc: "Vocabulario de alimentos.",
+        items: [
+          { q: "Mikhuna", s: "Comida" }, { q: "Papa", s: "Papa" }, { q: "Sara", s: "Maíz" }
+        ]
+      }
+      // puedes añadir más categorías aquí...
+    };
+
+    const categoriesEl = document.getElementById('vocab-categories');
+    const titleEl = document.getElementById('vocab-title');
+    const descEl = document.getElementById('vocab-desc');
+    const listEl = document.getElementById('vocab-list');
+
+    function createCategoryButton(name) {
+      const btn = document.createElement('button');
+      btn.className = 'nav-btn';
+      btn.textContent = name;
+      btn.style.textAlign = 'left';
+      btn.addEventListener('click', () => showCategory(name, btn));
+      return btn;
+    }
+
+    function showCategory(name, btn) {
+      // marcar activo
+      Array.from(categoriesEl.children).forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+
+      const data = VOCAB[name];
+      titleEl.textContent = name;
+      descEl.textContent = data.desc || '';
+      listEl.innerHTML = '';
+      data.items.forEach(it => {
+        const item = document.createElement('div');
+        item.className = 'vocab-item';
+        item.innerHTML = `<div style="font-weight:700;color:var(--accent);margin-bottom:6px">${it.q}</div>
+                          <div style="color:var(--muted)">${it.s}</div>
+                          <div style="margin-top:8px"><button class="play-audio" data-audio="${it.q}">Play</button></div>`;
+        listEl.appendChild(item);
+      });
+    }
+
+    // render buttons
+    Object.keys(VOCAB).forEach(cat => categoriesEl.appendChild(createCategoryButton(cat)));
+
+    // auto seleccionar la primera categoría
+    const first = categoriesEl.querySelector('button');
+    if (first) first.click();
+
+    // delegado sencillo para botones play (si implementas audio)
+    document.addEventListener('click', (e) => {
+      const p = e.target.closest('.play-audio');
+      if (!p) return;
+      const label = p.dataset.audio || '';
+      playAudioForLabel(label);
+    });
+
+    // Reproductor: busca archivos en /audio/<slug>.(mp3|ogg|wav), si no existen cae a TTS
+    function slugify(text) {
+      return String(text).toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quitar acentos
+        .replace(/\s+/g, '_')
+        .replace(/[^a-z0-9_]/g, '');
+    }
+
+    async function tryPlaySrc(src, timeout = 3000) {
+      return new Promise((resolve, reject) => {
+        const a = new Audio(src);
+        let settled = false;
+        const onError = () => { if (!settled) { settled = true; cleanup(); reject(new Error('error')); } };
+        const onCan = () => {
+          a.play().then(() => { if (!settled) { settled = true; cleanup(); resolve(); } })
+            .catch(onError);
+        };
+        const t = setTimeout(() => { if (!settled) { settled = true; cleanup(); reject(new Error('timeout')); } }, timeout);
+        function cleanup() { clearTimeout(t); a.removeEventListener('canplaythrough', onCan); a.removeEventListener('error', onError); }
+        a.addEventListener('canplaythrough', onCan, { once: true });
+        a.addEventListener('error', onError, { once: true });
+        // inicio de carga
+        a.load();
+      });
+    }
+
+    async function playAudioForLabel(label) {
+      if (!label) return;
+      const base = 'audio/' + slugify(label);
+      const exts = ['.mp3', '.ogg', '.wav'];
+      for (const ext of exts) {
+        try {
+          await tryPlaySrc(base + ext);
+          return;
+        } catch (err) {
+          // siguiente extensión
+        }
+      }
+      // fallback a SpeechSynthesis si no hay archivo disponible
+      speakText(label);
+    }
+
+    function speakText(text) {
+      try {
+        const u = new SpeechSynthesisUtterance(text);
+        // Preferir español; ajusta si tienes voz quechuahablante
+        u.lang = 'es-ES';
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(u);
+      } catch (e) {
+        console.warn('TTS no disponible:', e);
+      }
+    }
+  </script>
+</body>
+</html>
