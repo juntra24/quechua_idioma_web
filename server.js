@@ -14,10 +14,38 @@
 import express from "express";
 import cors from "cors";
 import { MongoClient } from "mongodb";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// --- START: static file handlers for apps where files are in project root ---
+// Resolve __dirname in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Serve main pages
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
+app.get('/leaderboard', (req, res) => res.sendFile(path.join(__dirname, 'leaderboard.html')));
+app.get('/quiz', (req, res) => res.sendFile(path.join(__dirname, 'quiz.html')));
+app.get('/vocabulario', (req, res) => res.sendFile(path.join(__dirname, 'vocabulario.html')));
+app.get('/chatbot', (req, res) => res.sendFile(path.join(__dirname, 'chatbot.html')));
+
+// Serve CSS/JS and images that are located at project root
+app.use('/chat.css', (req, res) => res.sendFile(path.join(__dirname, 'chat.css')));
+app.use('/styles.css', (req, res) => res.sendFile(path.join(__dirname, 'styles.css')));
+app.use('/quiz.js', (req, res) => res.sendFile(path.join(__dirname, 'quiz.js')));
+
+// images
+app.use('/icon.png', (req, res) => res.sendFile(path.join(__dirname, 'icon.png')));
+app.use('/fondo.png', (req, res) => res.sendFile(path.join(__dirname, 'fondo.png')));
+app.use('/fondo2.png', (req, res) => res.sendFile(path.join(__dirname, 'fondo2.png')));
+app.use('/fondo3.png', (req, res) => res.sendFile(path.join(__dirname, 'fondo3.png')));
+
+// --- END: static file handlers ---
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://juntrabajoprogramacion_db_user:X7oLkpVKIIcP0qy0@cluster0.7yukkfw.mongodb.net/?appName=Cluster0';
 const DB_NAME = 'aprende_quechua';
