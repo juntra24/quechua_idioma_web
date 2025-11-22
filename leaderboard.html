@@ -47,48 +47,82 @@
   </main>
 
   <script>
-    (function(){
-      const KEY = 'g_leaderboard';
-      const XP_PER_LEVEL = 100;
-      const MAX_LEVEL = 10;
+  (function(){
+    const KEY = 'g_leaderboard';
+    const API = '/api/leaderboard';
+    const XP_PER_LEVEL = 100;
+    const MAX_LEVEL = 10;
 
-      function loadList(){ try { const r = localStorage.getItem(KEY); return r?JSON.parse(r):[] } catch(e){ return [] } }
-      function formatDate(ts){ try { const d = new Date(ts); return d.toLocaleString(); } catch(e){ return '--'; } }
-      function pctFor(entry){
-        if (!entry) return 0;
-        if (entry.level >= MAX_LEVEL) return 100;
-        return Math.round(((entry.xp || 0) / XP_PER_LEVEL) * 100);
+    function loadListLocal(){ try { const r = localStorage.getItem(KEY); return r?JSON.parse(r):[] } catch(e){ return [] } }
+    function formatDate(ts){ try { const d = new Date(ts); return d.toLocaleString(); } catch(e){ return '--'; } }
+    function pctFor(entry){
+      if (!entry) return 0;
+      if ((entry.level || 0) >= MAX_LEVEL) return 100;
+      return Math.round(((entry.xp || 0) / XP_PER_LEVEL) * 100);
+    }
+
+    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[m]); }
+
+    function sortList(list){
+      list.sort((a,b)=> {
+        if ((b.level||0) !== (a.level||0)) return (b.level||0) - (a.level||0);
+        if ((b.xp||0) !== (a.xp||0)) return (b.xp||0) - (a.xp||0);
+        return (b.lastLogin||0) - (a.lastLogin||0);
+      });
+      return list;
+    }
+
+    function renderList(list){
+      const tbody = document.querySelector('#leaderTable tbody');
+      tbody.innerHTML = '';
+      sortList(list).forEach((u,i)=>{
+        const tr = document.createElement('tr');
+        const percent = pctFor(u);
+        tr.innerHTML = `<td>${i+1}</td>
+                        <td><strong>${escapeHtml(u.name||'Usuario')}</strong></td>
+                        <td class="small">${escapeHtml(u.email||'--')}</td>
+                        <td><span class="level-badge">N ${u.level||1}</span></td>
+                        <td><span class="pct">${percent}%</span></td>
+                        <td class="small">${u.lastLogin?formatDate(u.lastLogin):'--'}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function fetchFromServer(){
+      try {
+        const resp = await fetch(API, { cache: 'no-store' });
+        if (!resp.ok) throw new Error('server returned ' + resp.status);
+        const json = await resp.json();
+        if (json && json.ok && Array.isArray(json.list)) {
+          // optionally update local cache with server data
+          try { localStorage.setItem(KEY, JSON.stringify(json.list)); } catch(e){}
+          return json.list;
+        }
+        throw new Error('invalid payload');
+      } catch (e) {
+        // fallback to local
+        console.warn('No se pudo obtener leaderboard del servidor, usando localStorage:', e);
+        return null;
       }
+    }
 
-      function render(){
-        const list = loadList();
-        // ordenar por level desc, xp desc, lastLogin desc
-        list.sort((a,b)=> {
-          if ((b.level||0) !== (a.level||0)) return (b.level||0) - (a.level||0);
-          if ((b.xp||0) !== (a.xp||0)) return (b.xp||0) - (a.xp||0);
-          return (b.lastLogin||0) - (a.lastLogin||0);
-        });
-        const tbody = document.querySelector('#leaderTable tbody');
-        tbody.innerHTML = '';
-        list.forEach((u,i)=>{
-          const tr = document.createElement('tr');
-          const percent = pctFor(u);
-          tr.innerHTML = `<td>${i+1}</td>
-                          <td><strong>${escapeHtml(u.name||'Usuario')}</strong></td>
-                          <td class="small">${escapeHtml(u.email||'--')}</td>
-                          <td><span class="level-badge">N ${u.level||1}</span></td>
-                          <td><span class="pct">${percent}%</span></td>
-                          <td class="small">${u.lastLogin?formatDate(u.lastLogin):'--'}</td>`;
-          tbody.appendChild(tr);
-        });
+    async function fetchAndRender(){
+      // intentar servidor primero
+      const serverList = await fetchFromServer();
+      if (serverList && serverList.length) {
+        renderList(serverList);
+      } else {
+        // fallback a localStorage
+        const local = loadListLocal();
+        renderList(local);
       }
+    }
 
-      function escapeHtml(s){ return String(s).replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[m]); }
+    document.getElementById('refreshBtn').addEventListener('click', fetchAndRender);
 
-      document.getElementById('refreshBtn').addEventListener('click', render);
-      // Render inicial
-      render();
-    })();
+    // render inicial: intenta servidor y si falla usa local
+    fetchAndRender();
+  })();
   </script>
 </body>
 </html>
