@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Jugar Cartas — Aprende Quechua</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root{ --primary:#dc2626; --muted:#6b7280; font-family:Poppins,system-ui,Arial; }
+    body{ margin:0;background:#fafafa;color:#111; }
+    header{ background:var(--primary); color:#fff; padding:12px 16px; display:flex;align-items:center;justify-content:space-between; }
+    main{ padding:16px; max-width:1000px;margin:18px auto; }
+    .panel{ background:#fff;padding:14px;border-radius:10px;box-shadow:0 8px 24px rgba(2,6,23,0.06); }
+    .row{ display:flex;gap:12px;align-items:center;flex-wrap:wrap; }
+    input,button{ padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:14px; }
+    button.primary{ background:var(--primary);color:#fff;border:none;cursor:pointer;font-weight:700; }
+    .rooms{ margin-top:12px; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+    .room{ border:1px solid #eee; padding:10px;border-radius:8px; background:#fff; }
+    .participants{ margin-top:8px; font-size:14px; color:var(--muted); }
+    .results{ margin-top:14px; }
+    table{ width:100%; border-collapse:collapse; }
+    th,td{ padding:8px;border-bottom:1px solid #f1f5f9; text-align:left; }
+    .small{ color:var(--muted); font-size:13px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div><strong>Jugar Cartas</strong></div>
+    <div>
+      <a href="dashboard.html" style="color:#fff;text-decoration:none">Volver</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="panel">
+      <h3>Crear o unirse a una sala</h3>
+      <div class="row" style="margin-top:8px;">
+        <button id="createRoomBtn" class="primary">Crear Sala</button>
+        <input id="joinRoomInput" placeholder="Código de sala (ej: ABC123)"/>
+        <button id="joinRoomBtn">Unirse</button>
+        <button id="refreshRoomsBtn">Refrescar salas</button>
+      </div>
+
+      <div style="margin-top:12px;">
+        <strong>Salas abiertas</strong>
+        <div id="roomsList" class="rooms"></div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <strong>Mi sala activa</strong>
+        <div id="myRoom" class="room small">No estás en ninguna sala</div>
+      </div>
+
+      <div id="gameSection" style="margin-top:12px;display:none;">
+        <div class="panel">
+          <h4>Estado de la sala <span id="roomIdLabel"></span></h4>
+          <div id="participants" class="participants"></div>
+          <div style="margin-top:8px;">
+            <button id="startGameBtn" class="primary" style="display:none">Iniciar partida (solo creador)</button>
+          </div>
+          <div id="gameResult" class="results"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+  (function(){
+    const API = '';
+    // util: get profile from storage
+    function getProfile(){ try { return JSON.parse(sessionStorage.getItem('g_profile') || localStorage.getItem('g_profile') || 'null'); } catch(e){ return null; } }
+
+    const createBtn = document.getElementById('createRoomBtn');
+    const joinBtn = document.getElementById('joinRoomBtn');
+    const joinInput = document.getElementById('joinRoomInput');
+    const roomsListEl = document.getElementById('roomsList');
+    const refreshRoomsBtn = document.getElementById('refreshRoomsBtn');
+    const myRoomEl = document.getElementById('myRoom');
+    const gameSection = document.getElementById('gameSection');
+    const roomIdLabel = document.getElementById('roomIdLabel');
+    const participantsEl = document.getElementById('participants');
+    const startGameBtn = document.getElementById('startGameBtn');
+    const gameResultEl = document.getElementById('gameResult');
+
+    let myRoomId = null;
+    let pollInterval = null;
+
+    async function fetchRooms(){
+      try {
+        const r = await fetch('/api/rooms');
+        if (!r.ok) throw new Error('no rooms');
+        const j = await r.json();
+        if (j && j.ok && Array.isArray(j.list)) return j.list;
+      } catch(e){ /* ignore */ }
+      // fallback: no server -> read local stored rooms (if any)
+      try { const local = JSON.parse(localStorage.getItem('g_rooms')||'[]'); return local; } catch(e){ return []; }
+    }
+
+    function renderRooms(list){
+      roomsListEl.innerHTML = '';
+      if (!list || !list.length) { roomsListEl.innerHTML = '<div class="small">No hay salas</div>'; return; }
+      list.forEach(r => {
+        const d = document.createElement('div'); d.className='room';
+        d.innerHTML = `<div><strong>${r.roomId}</strong> <span class="small">(${r.participants?.length||0}/4)</span></div>
+                       <div class="small">Creador: ${r.creatorName||'--'}</div>
+                       <div style="margin-top:8px;"><button data-room="${r.roomId}" class="joinNowBtn">Unirse</button></div>`;
+        roomsListEl.appendChild(d);
+      });
+      // attach join handlers
+      Array.from(document.querySelectorAll('.joinNowBtn')).forEach(b=>{
+        b.addEventListener('click', ()=> { joinRoom(b.dataset.room); });
+      });
+    }
+
+    async function refreshRooms(){
+      const list = await fetchRooms();
+      renderRooms(list);
+    }
+
+    async function createRoom(){
+      const prof = getProfile();
+      const body = { email: prof?.email, name: prof?.name, picture: prof?.picture };
+      const resp = await fetch('/api/create-room', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      const j = await resp.json().catch(()=>null);
+      if (j && j.ok && j.room) {
+        setMyRoom(j.room.roomId);
+      } else {
+        alert('No se pudo crear sala (servidor).');
+      }
+    }
+
+    async function joinRoom(roomId){
+      const prof = getProfile();
+      const body = { roomId, email: prof?.email, name: prof?.name, picture: prof?.picture };
+      const resp = await fetch('/api/join-room', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      const j = await resp.json().catch(()=>null);
+      if (j && j.ok && j.room) {
+        setMyRoom(j.room.roomId);
+      } else {
+        alert('No se pudo unir a la sala: ' + (j && j.error ? j.error : 'error'));
+      }
+    }
+
+    function setMyRoom(roomId){
+      myRoomId = roomId;
+      myRoomEl.textContent = 'Sala: ' + roomId;
+      gameSection.style.display = 'block';
+      roomIdLabel.textContent = roomId;
+      // start polling room state
+      if (pollInterval) clearInterval(pollInterval);
+      pollInterval = setInterval(pollRoom, 2000);
+      pollRoom();
+    }
+
+    async function pollRoom(){
+      if (!myRoomId) return;
+      try {
+        const resp = await fetch('/api/room/' + myRoomId);
+        const j = await resp.json().catch(()=>null);
+        if (j && j.ok && j.room) {
+          renderRoomState(j.room);
+        } else {
+          participantsEl.innerHTML = '<div class="small">No se encontró la sala</div>';
+        }
+      } catch(e){
+        participantsEl.innerHTML = '<div class="small">Error conectando al servidor</div>';
+      }
+    }
+
+    function renderRoomState(room){
+      participantsEl.innerHTML = '';
+      const list = room.participants || [];
+      list.forEach(p => {
+        const div = document.createElement('div');
+        div.innerHTML = `<strong>${escapeHtml(p.name||p.email)}</strong> <span class="small">${escapeHtml(p.email||'')}</span>`;
+        participantsEl.appendChild(div);
+      });
+      // show start button only if I'm creator and 4 participants present and status waiting
+      const prof = getProfile();
+      const amCreator = prof && prof.email && (prof.email === room.creatorEmail);
+      startGameBtn.style.display = (amCreator && (list.length >=4) && room.status === 'waiting') ? 'inline-block' : 'none';
+
+      // if started, show link to play page for participants
+      if (room.status === 'started') {
+        const link = document.createElement('div');
+        link.style.marginTop = '8px';
+        link.innerHTML = `<a class="primary" style="padding:8px 12px;border-radius:8px;color:#fff;text-decoration:none;background:var(--primary)" href="cards_play.html?room=${room.roomId}">Ir a la partida</a>`;
+        participantsEl.appendChild(link);
+      }
+
+      // if finished show results
+      if (room.status === 'finished' && room.results) {
+        showResults(room.results);
+        // stop polling
+        if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+      }
+    }
+
+    function showResults(results){
+      gameResultEl.innerHTML = '<h4>Resultados</h4>';
+      const tbl = document.createElement('table');
+      const thead = document.createElement('thead'); thead.innerHTML = '<tr><th>#</th><th>Jugador</th><th>Score</th><th>XP ganado</th></tr>'; tbl.appendChild(thead);
+      const tbody = document.createElement('tbody');
+      results.forEach((r,i)=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${r.rank}</td><td>${escapeHtml(r.name)}</td><td>${r.score}</td><td>${r.xpEarned}</td>`;
+        tbody.appendChild(tr);
+      });
+      tbl.appendChild(tbody);
+      gameResultEl.appendChild(tbl);
+      // after showing, update local leaderboard cache by fetching server leaderboard
+      fetch('/api/leaderboard').then(r=>r.json()).then(j=>{ if(j && j.ok){ localStorage.setItem('g_leaderboard', JSON.stringify(j.list)); } }).catch(()=>{});
+    }
+
+    async function startGame(){
+      if (!myRoomId) return alert('No room');
+      const prof = getProfile();
+      const body = { roomId: myRoomId, starterEmail: prof?.email };
+      const resp = await fetch('/api/start-room', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      const j = await resp.json().catch(()=>null);
+      if (j && j.ok && j.results) {
+        renderRoomState({ ...j, participants: j.results, status:'finished', results:j.results });
+      } else {
+        alert('No se pudo iniciar la partida: ' + (j && j.error ? j.error : 'error'));
+      }
+    }
+
+    // helpers
+    function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, (m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+    // events
+    createBtn.addEventListener('click', createRoom);
+    joinBtn.addEventListener('click', ()=> joinRoom(joinInput.value.trim().toUpperCase()));
+    refreshRoomsBtn.addEventListener('click', refreshRooms);
+    startGameBtn.addEventListener('click', startGame);
+
+    // room list initial
+    refreshRooms();
+
+    // expose setMyRoom for external join links
+    window.setMyRoom = setMyRoom;
+  })();
+  </script>
+</body>
+</html>

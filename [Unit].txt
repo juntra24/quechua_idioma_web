@@ -1,0 +1,15 @@
+[Unit]
+Description=Quechua backend
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/home/www/quechua
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+Environment=NODE_ENV=production
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

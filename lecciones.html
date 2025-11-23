@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="qu"> 
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Lecciones - Aprende Quechua</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+  <header class="site-header">
+    <h1>Lecciones</h1>
+  </header>
+
+  <main class="page-content">
+    <div style="display:flex;gap:20px;align-items:flex-start;">
+      <!-- SIDEBAR -->
+      <aside style="width:260px;">
+        <div class="content-card">
+          <h3 style="margin-top:0;margin-bottom:12px">Lecciones</h3>
+          <div id="lesson-list" style="display:flex;flex-direction:column;gap:8px">
+            <!-- botones generados por JS -->
+          </div>
+        </div>
+      </aside>
+
+      <!-- CONTENT -->
+      <section id="lesson-content" class="content-card" style="flex:1;min-height:320px;">
+        <h2 id="lesson-title">Selecciona una lección</h2>
+        <div id="lesson-body" style="color:var(--muted);margin-top:8px">Haz clic en una lección a la izquierda para ver su contenido.</div>
+      </section>
+    </div>
+  </main>
+
+  <div class="return-footer">
+    <a class="return-btn" href="dashboard.html">Volver</a>
+  </div>
+
+  <script>
+    // Datos de lecciones (id -> título y HTML)
+    const LESSONS = {
+      "leccion-1": { title: "Lección 1: Saludos", html: `<p>Los saludos más comunes:</p><ul><li><strong>Rimaykullayki</strong> - Hola</li><li><strong>Allillanchu?</strong> - ¿Cómo estás?</li><li><strong>Allinmi</strong> - Bien</li></ul>` },
+      "leccion-2": { title: "Lección 2: Números", html: `<p>Números del 1 al 10:</p><ul><li>Huk - Uno</li><li>Iskay - Dos</li><li>Kimsa - Tres</li><li>Tawa - Cuatro</li><li>Pichqa - Cinco</li><li>Suqta - Seis</li></ul>` },
+      "leccion-3": { title: "Lección 3: Familia", html: `<p>Miembros de la familia:</p><ul><li>Tayta - Padre</li><li>Mama - Madre</li><li>Wawqi - Hermano</li></ul>` },
+      "leccion-4": { title: "Lección 4: Animales", html: `<p>Animales comunes:</p><ul><li>Allqu - Perro</li><li>Michi - Gato</li><li>Kuntur - Cóndor</li></ul>` },
+      "leccion-5": { title: "Lección 5: Colores", html: `<p>Colores básicos:</p><ul><li>Puka - Rojo</li><li>Yana - Negro</li><li>Yuraq - Blanco</li></ul>` }
+      // añade más lecciones si lo deseas
+    };
+
+    const lessonListEl = document.getElementById('lesson-list');
+    const titleEl = document.getElementById('lesson-title');
+    const bodyEl = document.getElementById('lesson-body');
+
+    function createLessonBtn(id, title) {
+      const btn = document.createElement('button');
+      btn.className = 'nav-btn';
+      btn.textContent = title;
+      btn.style.textAlign = 'left';
+      btn.addEventListener('click', () => showLesson(id, btn));
+      return btn;
+    }
+
+    function showLesson(id, btn) {
+      Array.from(lessonListEl.children).forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      const lesson = LESSONS[id];
+      titleEl.textContent = lesson.title;
+      bodyEl.innerHTML = lesson.html;
+    }
+
+    // render botones
+    Object.keys(LESSONS).forEach(k => lessonListEl.appendChild(createLessonBtn(k, LESSONS[k].title)));
+
+    // auto seleccionar la primera lección
+    const first = lessonListEl.querySelector('button');
+    if (first) first.click();
+  </script>
+</body>
+</html>
