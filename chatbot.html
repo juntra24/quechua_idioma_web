@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Chat Bot — Ollama 3</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root{ --bg:#f5f7fb; --card:#fff; --primary:#0b74ff; --muted:#6b7280; font-family: "Poppins", system-ui, sans-serif;}
+    body{margin:0;background:var(--bg);height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+    .chat-app{width:820px;max-width:100%;display:flex;flex-direction:column;gap:12px;}
+    .header{display:flex;align-items:center;justify-content:space-between;background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.06);}
+    .title{font-weight:700}
+    .close-btn{background:#ef4444;color:#fff;border:none;padding:8px 12px;border-radius:8px;cursor:pointer}
+    .panel{background:var(--card);border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(2,6,23,0.04);display:flex;flex-direction:column;height:520px;max-height:70vh;}
+    #messages{flex:1;overflow:auto;padding:8px;display:flex;flex-direction:column;gap:8px;background:#f7f9fc;border-radius:8px;}
+    .msg{padding:10px 12px;border-radius:12px;max-width:78%;word-wrap:break-word}
+    .msg.user{align-self:flex-end;background:var(--primary);color:#fff;border-bottom-right-radius:6px}
+    .msg.bot{align-self:flex-start;background:#e9ecef;color:#000;border-bottom-left-radius:6px}
+    .input-row{display:flex;gap:8px;padding-top:12px}
+    .input-row input{flex:1;padding:10px 12px;border-radius:20px;border:1px solid #ddd;outline:none}
+    .send-btn{background:var(--primary);color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer}
+    .meta{font-size:13px;color:var(--muted);margin-top:6px;text-align:center;}
+    @media (max-width:640px){ .chat-app{width:100%} .panel{height:70vh} }
+  </style>
+</head>
+<body>
+  <div class="chat-app" role="main">
+    <div class="header">
+      <div class="title">Chat Bot <span style="font-weight:500;color:var(--muted);font-size:14px">— Ollama 3</span></div>
+      <button class="close-btn" id="closeChat">Salir</button>
+    </div>
+
+    <div class="panel" role="region" aria-label="Chat panel">
+      <div id="messages" aria-live="polite"></div>
+
+      <div class="input-row">
+        <input id="chatInput" type="text" placeholder="Escribe un mensaje..." aria-label="Mensaje"/>
+        <button id="sendBtn" class="send-btn">Enviar</button>
+      </div>
+
+      <div class="meta">Conecta al servidor local: <strong>/chat</strong>. Asegúrate de ejecutar node server.js y ollama run llama3 si corresponde.</div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      // Backend en Render (producción) - URL pública que desplegaste
+      const RENDER_BACKEND = 'https://quechua-idioma-web.onrender.com';
+      // Detectar entorno: si se sirve desde tu GitHub Pages usar Render; en local usar servidor dev.
+      const IS_GHPAGES = location.host && location.host.includes('juntra24.github.io');
+      const API_URL = IS_GHPAGES ? `${RENDER_BACKEND}/chat` : 'http://localhost:3000/chat';
+ 
+      const sendBtn = document.getElementById('sendBtn');
+      const input = document.getElementById('chatInput');
+      const messagesEl = document.getElementById('messages');
+      const closeBtn = document.getElementById('closeChat');
+      let busy = false;
+ 
+      function addMessage(text, fromUser = false) {
+        const div = document.createElement('div');
+        div.className = 'msg ' + (fromUser ? 'user' : 'bot');
+        div.textContent = text;
+        messagesEl.appendChild(div);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+        return div;
+      }
+ 
+      // efecto de tipeo (no es streaming, sólo visual)
+      function typeText(elem, text, speed = 18) {
+        elem.textContent = '';
+        let i = 0;
+        return new Promise((resolve) => {
+          const t = setInterval(() => {
+            elem.textContent += text.charAt(i++);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+            if (i >= text.length) {
+              clearInterval(t);
+              resolve();
+            }
+          }, speed);
+        });
+      }
+ 
+      async function sendMessage() {
+        if (busy) return;
+        const text = input.value.trim();
+        if (!text) return;
+        addMessage(text, true);
+        input.value = '';
+        input.focus();
+ 
+        busy = true;
+        sendBtn.disabled = true;
+        input.disabled = true;
+ 
+        // indicador "pensando"
+        const thinkingEl = addMessage('Pensando...', false);
+ 
+        try {
+          const res = await fetch(API_URL, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ prompt: text }),
+            // small timeout via AbortController could be added if desired
+          });
+ 
+          if (!res.ok) {
+            const t = await res.text().catch(()=>`Error ${res.status}`);
+            thinkingEl.textContent = t;
+            return;
+          }
+ 
+          const ct = (res.headers.get('content-type') || '').toLowerCase();
+          let reply = '';
+          if (ct.includes('application/json')) {
+            const data = await res.json().catch(()=>null);
+            reply = (data && (data.reply || data.text)) ? (data.reply || data.text) : (data ? JSON.stringify(data) : '');
+          } else {
+            reply = await res.text().catch(()=>'');
+          }
+ 
+          reply = (reply || '').toString().trim();
+          if (!reply) reply = 'No he podido generar una respuesta.';
+ 
+          // animación: limpiar "Pensando..." y tipeo de la respuesta
+          thinkingEl.textContent = '';
+          await typeText(thinkingEl, reply, 14);
+        } catch (err) {
+          console.error('Chat network error:', err);
+          // diagnóstico claro para ERR_CONNECTION_REFUSED
+          thinkingEl.textContent = 'No se pudo conectar al servidor de backend. Verifica que tu backend esté en línea: ' + API_URL +
+                                   ' — prueba https://quechua-idioma-web.onrender.com/health en el navegador.';
+        } finally {
+          busy = false;
+          sendBtn.disabled = false;
+          input.disabled = false;
+          input.focus();
+        }
+      }
+ 
+      sendBtn.addEventListener('click', sendMessage);
+      input.addEventListener('keypress', (e)=>{ if (e.key === 'Enter') sendMessage(); });
+ 
+      // cerrar vuelve a index
+      closeBtn.addEventListener('click', ()=> { window.location.href = 'dashboard.html'; });
+ 
+      // mensaje de bienvenida
+      addMessage('Hola, soy tu asistente Quechua. ¿En qué te ayudo?', false);
+    })();
+  </script>
+</body>
+</html>

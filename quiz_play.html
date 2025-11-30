@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Quiz en Sala — Aprende Quechua</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root{ --primary:#dc2626; --muted:#6b7280; font-family:Poppins,system-ui,Arial; }
+    body{ margin:0;background:#fafafa;color:#111; }
+    header{ background:var(--primary); color:#fff; padding:12px 16px; display:flex;align-items:center;justify-content:space-between; }
+    main{ padding:16px; max-width:900px;margin:18px auto; }
+    .panel{ background:#fff;padding:14px;border-radius:10px;box-shadow:0 8px 24px rgba(2,6,23,0.06); min-height:420px; }
+    .question-header{ display:flex;justify-content:space-between;align-items:center;margin-bottom:12px; }
+    .options{ display:flex;flex-direction:column;gap:8px;margin-top:12px; }
+    .option-btn{ padding:10px 12px;border-radius:8px;border:1px solid #ddd;background:#fff;cursor:pointer;text-align:left;transition:all .2s; }
+    .option-btn:hover{ background:#f3f4f6;border-color:var(--primary); }
+    .option-btn.selected{ background:var(--primary);color:#fff;border-color:var(--primary); }
+    .option-btn.correct{ background:#10b981;color:#fff; }
+    .option-btn.wrong{ background:#ef4444;color:#fff; }
+    .results-table{ width:100%;border-collapse:collapse;margin-top:12px; }
+    th,td{ padding:10px;border-bottom:1px solid #eee;text-align:left; }
+    th{ font-weight:600;background:#f3f4f6; }
+    .small{ color:var(--muted);font-size:13px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div><strong>Quiz en Sala</strong></div>
+    <div><a href="cards.html" style="color:#fff;text-decoration:none">Salir</a></div>
+  </header>
+
+  <main>
+    <div class="panel">
+      <div class="question-header">
+        <div><strong id="questionLabel">Pregunta 1/10</strong></div>
+        <div class="small" id="scoreLabel">Score: 0</div>
+      </div>
+
+      <div id="questionText" style="font-size:16px;margin-bottom:12px;"></div>
+      <div id="options" class="options"></div>
+
+      <div style="margin-top:12px;">
+        <button id="nextBtn" style="background:var(--primary);color:#fff;border:none;padding:8px 12px;border-radius:8px;cursor:pointer;">Siguiente</button>
+        <button id="finishBtn" style="background:#10b981;color:#fff;border:none;padding:8px 12px;border-radius:8px;cursor:pointer;display:none;">Terminar Quiz</button>
+      </div>
+
+      <div id="resultsDiv" style="display:none;margin-top:12px;">
+        <h3>Resultados Finales</h3>
+        <table class="results-table" id="resultsTable">
+          <thead><tr><th>#</th><th>Jugador</th><th>Score</th><th>XP Ganado</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div style="margin-top:12px;">
+          <a href="leaderboard.html" class="primary" style="padding:8px 12px;border-radius:8px;color:#fff;text-decoration:none;background:var(--primary);display:inline-block;">Ver Clasificación</a>
+          <a href="cards.html" style="padding:8px 12px;border-radius:8px;color:var(--primary);text-decoration:none;border:1px solid var(--primary);border-radius:8px;display:inline-block;margin-left:8px;">Volver a Salas</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+  (async function(){
+    function qs(name){ const url = new URL(window.location.href); return url.searchParams.get(name); }
+    const roomId = (qs('room')||'').toUpperCase();
+    let profile = null;
+    try { profile = JSON.parse(sessionStorage.getItem('g_profile') || localStorage.getItem('g_profile') || 'null'); } catch(e){ profile = null; }
+    if (!profile) { alert('Necesitas sesión Google'); window.location.href='dashboard.html'; return; }
+
+    const questionTextEl = document.getElementById('questionText');
+    const optionsEl = document.getElementById('options');
+    const questionLabelEl = document.getElementById('questionLabel');
+    const scoreLabelEl = document.getElementById('scoreLabel');
+    const nextBtn = document.getElementById('nextBtn');
+    const finishBtn = document.getElementById('finishBtn');
+    const resultsDiv = document.getElementById('resultsDiv');
+    const resultsTable = document.getElementById('resultsTable');
+
+    let quiz = [];
+    let currentQ = 0;
+    let userScore = 0;
+    let selectedAnswer = null;
+    let answered = false;
+
+    // Fetch room + quiz
+    async function fetchRoom() {
+      try {
+        const r = await fetch('/api/room/' + roomId);
+        const j = await r.json();
+        if (j && j.ok && j.room) {
+          return j.room;
+        }
+      } catch(e){}
+      return null;
+    }
+
+    async function init() {
+      const room = await fetchRoom();
+      if (!room || room.status !== 'quiz_active' || !room.quiz) {
+        alert('Quiz no disponible');
+        window.location.href = 'cards.html';
+        return;
+      }
+      quiz = room.quiz;
+      renderQuestion();
+    }
+
+    function renderQuestion() {
+      if (currentQ >= quiz.length) {
+        showResults();
+        return;
+      }
+      const q = quiz[currentQ];
+      questionTextEl.textContent = q.question;
+      questionLabelEl.textContent = `Pregunta ${currentQ+1}/${quiz.length}`;
+      scoreLabelEl.textContent = `Score: ${userScore}`;
+      optionsEl.innerHTML = '';
+      selectedAnswer = null;
+      answered = false;
+      finishBtn.style.display = currentQ === quiz.length - 1 ? 'inline-block' : 'none';
+      nextBtn.style.display = currentQ === quiz.length - 1 ? 'none' : 'inline-block';
+
+      q.options.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.textContent = opt;
+        btn.addEventListener('click', () => selectAnswer(idx));
+        optionsEl.appendChild(btn);
+      });
+    }
+
+    async function selectAnswer(idx) {
+      if (answered) return;
+      selectedAnswer = idx;
+      answered = true;
+      const q = quiz[currentQ];
+      const correct = q.correct === idx;
+
+      // Submit to server
+      try {
+        await fetch('/api/submit-answer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roomId, email: profile.email, questionIndex: currentQ, answerIndex: idx })
+        });
+      } catch(e){}
+
+      // Show visual feedback
+      const buttons = document.querySelectorAll('.option-btn');
+      buttons.forEach((btn, i) => {
+        btn.disabled = true;
+        if (i === q.correct) btn.classList.add('correct');
+        if (i === idx && !correct) btn.classList.add('wrong');
+      });
+
+      if (correct) userScore++;
+      scoreLabelEl.textContent = `Score: ${userScore}`;
+    }
+
+    async function nextQuestion() {
+      currentQ++;
+      if (currentQ >= quiz.length) {
+        await finishQuiz();
+      } else {
+        renderQuestion();
+      }
+    }
+
+    function showResults() {
+      optionsEl.innerHTML = '';
+      questionTextEl.textContent = 'Quiz completado';
+      nextBtn.style.display = 'none';
+      finishBtn.style.display = 'none';
+      resultsDiv.style.display = 'block';
+    }
+
+    function showFinalResults(results) {
+      const tbody = resultsTable.querySelector('tbody');
+      tbody.innerHTML = '';
+      results.forEach(r => {
+        const tr = document.createElement('tr');
+        function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, (m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+        tr.innerHTML = `<td>${r.rank}</td><td>${escapeHtml(r.name||r.email)}</td><td>${r.score}/${r.totalQuestions}</td><td>${r.xpEarned}</td>`;
+        tbody.appendChild(tr);
+      });
+      resultsDiv.style.display = 'block';
+    }
+
+    async function finishQuiz() {
+      try {
+        const r = await fetch('/api/finish-quiz', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roomId })
+        });
+        const j = await r.json().catch(()=>null);
+        if (!r.ok) { alert('Error: ' + (j && j.error ? j.error : r.status)); return; }
+        if (j && j.ok && j.results) {
+          showFinalResults(j.results);
+        } else {
+          alert('Error finalizando quiz: ' + (j && j.error ? j.error : 'respuesta inválida'));
+        }
+      } catch(e){ alert('Error: ' + e.message); console.error(e); }
+    }
+
+    nextBtn.addEventListener('click', nextQuestion);
+    finishBtn.addEventListener('click', finishQuiz);
+
+    await init();
+  })();
+  </script>
+</body>
+</html>

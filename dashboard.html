@@ -1,0 +1,726 @@
+<!doctype html>
+<html lang="qu">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Aprende Quechua — Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <style>
+    :root{
+      --bg:#ffffff;
+      --card:#ffffff;
+      --primary:#dc2626; /* rojo principal */
+      --primary-dark:#991b1b;
+      --muted:#6b7280;
+      --accent:rgba(220,38,38,0.08);
+      font-family: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    body{ margin:0; background:var(--bg); color:#111; }
+    /* Header rojo con texto blanca y widget de usuario en la derecha */
+    header.site-header{
+      padding:14px 20px;
+      background:var(--primary);
+      color:#fff;
+      box-shadow: 0 4px 18px rgba(153,27,27,0.08);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+    }
+    header.site-header h1{ margin:0; font-size:20px; color:#fff; font-weight:600; }
+    /* user widget en header (foto, nombre, sign-in container o sign-out) */
+    .user-widget{ display:flex; align-items:center; gap:12px; color:#fff; }
+    .user-widget img{ width:40px; height:40px; border-radius:50%; object-fit:cover; border:2px solid rgba(255,255,255,0.22); box-shadow:0 6px 18px rgba(0,0,0,0.12); }
+    .user-widget .name{ font-weight:600; font-size:14px; }
+    .user-widget .btn-signout{
+      background:transparent;
+      color:#fff;
+      border:1px solid rgba(255,255,255,0.18);
+      padding:6px 10px;
+      border-radius:8px;
+      cursor:pointer;
+      font-weight:600;
+    }
+
+    /* Nivel / XP widget */
+    .level-widget{ display:flex; flex-direction:column; align-items:flex-end; gap:6px; color:#fff; font-weight:600; }
+    .level-row{ display:flex; align-items:center; gap:10px; }
+    .level-badge{
+      background:rgba(255,255,255,0.12);
+      color:#fff;
+      padding:6px 10px;
+      border-radius:999px;
+      font-size:13px;
+      min-width:54px;
+      text-align:center;
+    }
+    .level-progress-wrap{ width:160px; background:rgba(255,255,255,0.12); border-radius:999px; overflow:hidden; height:8px; }
+    .level-progress{ height:100%; background:rgba(255,255,255,0.95); width:0%; transition:width .6s ease; }
+    @media (max-width:640px){
+      .level-progress-wrap{ width:110px; }
+      .level-badge{ padding:5px 8px; font-size:12px; min-width:46px; }
+    }
+
+    /* Dashboard layout: pantalla completa bajo el header */
+    .layout {
+      display:block;
+      margin:0;
+      padding:0;
+      min-height: calc(100vh - 64px); /* asume header aprox 64px; se ajusta según padding del header */
+    }
+
+    /* Main content: ocupar todo el ancho/alto disponible bajo el header */
+    .content {
+      width:100%;
+      height: calc(100vh - 64px); /* mantiene espacio para el header */
+      box-sizing:border-box;
+      overflow:auto; /* scroll interno sin superponer elementos inferiores */
+      padding:28px 36px 48px; /* espacio inferior para que no corte al final */
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0)); /* sutil */
+    }
+    /* quitar el estilo de "card" para que el área sea full-bleed (elimina contenedor visual) */
+    .content .card {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      padding: 0;
+      border-radius: 0;
+    }
+    /* Rejilla más flexible y tarjetas más grandes */
+    .courses-grid {
+      margin-top:10px;
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap:22px;
+      align-items:start;
+    }
+    .course {
+      border-radius:16px;
+      padding:28px;
+      background:#fff;
+      border:1px solid rgba(220,38,38,0.08);
+      cursor:pointer;
+      transition:transform .16s,box-shadow .16s, border-color .16s;
+      min-height:150px; /* mayor altura visual */
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+    .course:hover{
+      transform:translateY(-8px);
+      box-shadow:0 22px 50px rgba(220,38,38,0.10);
+      border-color: rgba(220,38,38,0.18);
+    }
+    .course h4{ margin:0 0 10px 0; color:var(--primary); font-size:20px; }
+    .course p{ margin:0; color:var(--muted); font-size:15px; }
+
+    /* Añadidos: estilos para tarjeta-botón del quiz */
+    .course.enter-quiz {
+      background: linear-gradient(135deg, rgba(220,38,38,0.12), rgba(220,38,38,0.06));
+      border: 2px solid rgba(220,38,38,0.14);
+      padding: 32px;
+      min-height: 180px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      align-items:flex-start;
+      gap:8px;
+    }
+    .course.enter-quiz h4{ font-size:22px; }
+    .start-quiz-btn{
+      margin-top:8px;
+      background:var(--primary);
+      color:#fff;
+      border:none;
+      padding:10px 14px;
+      border-radius:10px;
+      cursor:pointer;
+      font-weight:700;
+    }
+    .start-quiz-btn:active{ transform:translateY(1px); }
+
+    /* Toast flotante para notificar subida/bajada de nivel */
+    .level-toast{
+      position:fixed;
+      top:18px;
+      left:50%;
+      transform:translateX(-50%) translateY(-20px);
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding:12px 16px;
+      border-radius:12px;
+      color:#fff;
+      z-index:9999;
+      box-shadow:0 12px 30px rgba(0,0,0,0.25);
+      opacity:0;
+      transition: transform .6s cubic-bezier(.2,.8,.2,1), opacity .6s;
+      pointer-events:none;
+      font-weight:700;
+    }
+    .level-toast.show{ transform:translateX(-50%) translateY(0); opacity:1; pointer-events:auto; }
+    .level-toast.hide{ transform:translateX(-50%) translateY(72px); opacity:0; }
+    .level-toast .star{ font-size:20px; line-height:1; }
+    .level-toast.success{ background: linear-gradient(90deg, #16a34a, #059669); }
+    .level-toast.warn{ background: linear-gradient(90deg, #f97316, #ef4444); }
+    .level-toast .msg{ margin-left:2px; font-size:15px; }
+    @media (max-width:640px){ .level-toast{ left:50%; top:12px; padding:10px 12px; } .level-toast .msg{ font-size:13px; } }
+
+    /* Dashboard layout: pantalla completa bajo el header */
+    .layout {
+      display:block;
+      margin:0;
+      padding:0;
+      min-height: calc(100vh - 64px); /* asume header aprox 64px; se ajusta según padding del header */
+    }
+
+    /* Main content: ocupar todo el ancho/alto disponible bajo el header */
+    .content {
+      width:100%;
+      height: calc(100vh - 64px); /* mantiene espacio para el header */
+      box-sizing:border-box;
+      overflow:auto; /* scroll interno sin superponer elementos inferiores */
+      padding:28px 36px 48px; /* espacio inferior para que no corte al final */
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0)); /* sutil */
+    }
+    /* quitar el estilo de "card" para que el área sea full-bleed (elimina contenedor visual) */
+    .content .card {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      padding: 0;
+      border-radius: 0;
+    }
+    /* Rejilla más flexible y tarjetas más grandes */
+    .courses-grid {
+      margin-top:10px;
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap:22px;
+      align-items:start;
+    }
+    .course {
+      border-radius:16px;
+      padding:28px;
+      background:#fff;
+      border:1px solid rgba(220,38,38,0.08);
+      cursor:pointer;
+      transition:transform .16s,box-shadow .16s, border-color .16s;
+      min-height:150px; /* mayor altura visual */
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+    .course:hover{
+      transform:translateY(-8px);
+      box-shadow:0 22px 50px rgba(220,38,38,0.10);
+      border-color: rgba(220,38,38,0.18);
+    }
+    .course h4{ margin:0 0 10px 0; color:var(--primary); font-size:20px; }
+    .course p{ margin:0; color:var(--muted); font-size:15px; }
+
+    /* Añadidos: estilos para tarjeta-botón del quiz */
+    .course.enter-quiz {
+      background: linear-gradient(135deg, rgba(220,38,38,0.12), rgba(220,38,38,0.06));
+      border: 2px solid rgba(220,38,38,0.14);
+      padding: 32px;
+      min-height: 180px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      align-items:flex-start;
+      gap:8px;
+    }
+    .course.enter-quiz h4{ font-size:22px; }
+    .start-quiz-btn{
+      margin-top:8px;
+      background:var(--primary);
+      color:#fff;
+      border:none;
+      padding:10px 14px;
+      border-radius:10px;
+      cursor:pointer;
+      font-weight:700;
+    }
+    .start-quiz-btn:active{ transform:translateY(1px); }
+
+    /* Small screens */
+    @media (max-width: 980px){
+      .content{ padding:18px; height: calc(100vh - 64px); }
+      .courses-grid{ grid-template-columns:repeat(2,1fr); gap:16px; }
+    }
+    @media (max-width:600px){
+      .courses-grid{ grid-template-columns:repeat(1,1fr); gap:12px; }
+      .course{ padding:20px; min-height:120px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <h1>Aprende Quechua</h1>
+    <!-- widget de usuario: si no hay sesión, gSignInDiv se mostrará; si hay sesión se muestran foto, nombre y botón -->
+    <div class="user-widget" aria-hidden="false">
+      <div id="gSignInDiv" style="display:block;"></div>
+      <img id="profilePic" src="https://via.placeholder.com/40" alt="Avatar" style="display:none;">
+      <div id="profileName" class="name" style="display:none;">Invitado</div>
+
+      <!-- Nivel widget (siempre visible; se actualiza desde JS) -->
+      <div class="level-widget" aria-hidden="false" style="margin-left:8px;">
+        <div class="level-row">
+          <div id="levelBadge" class="level-badge">Nivel 1</div>
+          <div class="level-progress-wrap" title="Progreso hacia el siguiente nivel">
+            <div id="levelProgress" class="level-progress"></div>
+          </div>
+        </div>
+        <div style="font-size:12px;opacity:0.95" id="levelXpText">XP: 0/100</div>
+      </div>
+
+      <button id="signOutBtn" class="btn-signout" style="display:none;">Cerrar sesión</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- CONTENIDO PRINCIPAL (full-bleed) -->
+    <main class="content" id="main">
+      <header style="margin-bottom:18px;">
+        <h2 style="margin:0;color:var(--primary);font-size:26px;">Mi Sección</h2>
+        <p style="color:var(--muted);margin-top:6px;">Elige una sección para continuar aprendiendo</p>
+      </header>
+
+      <div class="courses-grid" id="coursesGrid">
+        <!-- Nuevo: tarjeta destacada para ingresar al quiz -->
+        <div class="course enter-quiz" role="button" tabindex="0" id="enterQuizCard" aria-label="Ingresar al quiz">
+          <h4>Ir al Quiz</h4>
+          <p>Comienza el Quiz ahora y gana XP</p>
+          <button id="enterQuizBtn" class="start-quiz-btn">Entrar al Quiz</button>
+        </div>
+
+        <!-- Nuevo: tarjeta para jugar cartas -->
+        <a class="course" href="cards.html" role="button" id="playCardsCard" aria-label="Jugar Cartas">
+          <h4>Jugar en Linea</h4>
+          <p>Diviértete con el juego en linea educativo</p>
+        </a>
+
+        <!-- Nuevo: tarjeta para ver la clasificación -->
+        <a class="course" href="leaderboard.html" role="button" id="leaderboardCard" aria-label="Ver clasificación">
+          <h4>Clasificación</h4>
+          <p>Ver puntajes y niveles de los usuarios</p>
+        </a>
+
+       <a class="course" href="lecciones.html" role="button">
+          <h4>Práctica</h4>
+          <p>Pon a prueba tus conocimientos</p>
+        </a>
+        <a class="course" href="vocabulario.html" role="button">
+          <h4>Comunicación</h4>
+          <p>Interactúa y aprende en tiempo real</p>
+        </a>
+        <a class="course" href="chatbot.html" role="button">
+          <h4>Chat Bot</h4>
+          <p>Ollama 3</p>
+        </a>
+        <!-- añade más tarjetas si lo deseas -->
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Google Identity + perfil UI
+    const CLIENT_ID = '903625348841-47re2o6srlb8176st4pob617oo91im4d.apps.googleusercontent.com';
+
+    /* === Sistema de niveles extendido (1..10) ===
+       - Cada nivel requiere XP_PER_LEVEL XP.
+       - handleQuizResult(input):
+           * si input es número -> gana esa cantidad de XP (compatibilidad).
+           * si input es {correct, wrong} -> calcula deltaXP = correct*XP_PER_CORRECT - wrong*XP_PENALTY.
+       - applyLevelChange(deltaXP) aplica delta (positivo o negativo), sube o baja niveles según corresponda.
+    */
+    const MAX_LEVEL = 100;
+    const XP_PER_LEVEL = 100;
+    const LEVEL_STORE_KEY = 'g_level_state';
+    const XP_PER_CORRECT = 10; // XP ganado por respuesta correcta
+    const XP_PENALTY_PER_WRONG = 5; // XP restado por respuesta incorrecta
+
+    function loadLevelState(){
+      try {
+        const raw = localStorage.getItem(LEVEL_STORE_KEY);
+        if (!raw) return { level:1, xp:0 };
+        const s = JSON.parse(raw);
+        return { level: Math.max(1, Math.min(MAX_LEVEL, s.level || 1)), xp: Math.max(0, s.xp || 0) };
+      } catch (e) { return { level:1, xp:0 }; }
+    }
+
+    function saveLevelState(state){
+      try { localStorage.setItem(LEVEL_STORE_KEY, JSON.stringify(state)); } catch(e){/* ignore */ }
+    }
+
+    function updateLevelUI(state){
+      const level = Math.min(MAX_LEVEL, state.level || 1);
+      const xp = Math.max(0, state.xp || 0);
+      const badge = document.getElementById('levelBadge');
+      const prog = document.getElementById('levelProgress');
+      const xpText = document.getElementById('levelXpText');
+      if (!badge || !prog || !xpText) return;
+      badge.textContent = 'Nivel ' + level;
+      const pct = level >= MAX_LEVEL ? 100 : Math.round((xp / XP_PER_LEVEL) * 100);
+      prog.style.width = pct + '%';
+      xpText.textContent = 'XP: ' + Math.min(xp, XP_PER_LEVEL) + '/' + XP_PER_LEVEL;
+    }
+
+    function applyLevelChange(deltaXP){
+      if (typeof deltaXP !== 'number' || isNaN(deltaXP)) return loadLevelState();
+      let state = loadLevelState();
+      if (state.level >= MAX_LEVEL && deltaXP > 0){
+        state.level = MAX_LEVEL;
+        state.xp = XP_PER_LEVEL;
+        saveLevelState(state);
+        updateLevelUI(state);
+        return state;
+      }
+      state.xp = (state.xp || 0) + Math.round(deltaXP);
+      let leveledUp = false;
+      while (state.xp >= XP_PER_LEVEL && state.level < MAX_LEVEL){
+        state.xp -= XP_PER_LEVEL;
+        state.level += 1;
+        leveledUp = true;
+      }
+      let leveledDown = false;
+      while (state.xp < 0 && state.level > 1){
+        state.level -= 1;
+        state.xp += XP_PER_LEVEL;
+        leveledDown = true;
+      }
+      if (state.level <= 1 && state.xp < 0){
+        state.level = 1;
+        state.xp = 0;
+      }
+      if (state.level >= MAX_LEVEL){
+        state.level = MAX_LEVEL;
+        state.xp = XP_PER_LEVEL;
+      }
+      saveLevelState(state);
+      updateLevelUI(state);
+      if (leveledUp){
+        showLevelToast('¡Felicidades! Has subido al nivel ' + state.level + '.', 'success');
+      } else if (leveledDown){
+        showLevelToast('Has bajado al nivel ' + state.level + '. Sigue practicando.', 'warn');
+      }
+      return state;
+    }
+
+    // Entrada pública: número (XP) o {correct, wrong}
+    function handleQuizResult(input){
+      if (typeof input === 'number'){
+        return applyLevelChange(Math.round(input));
+      }
+      if (typeof input === 'object' && input !== null){
+        const correct = Math.max(0, Number(input.correct) || 0);
+        const wrong = Math.max(0, Number(input.wrong) || 0);
+        const delta = (correct * XP_PER_CORRECT) - (wrong * XP_PENALTY_PER_WRONG);
+        return applyLevelChange(delta);
+      }
+      return loadLevelState();
+    }
+
+    window.handleQuizResult = handleQuizResult;
+    // inicializar UI con estado guardado
+    (function(){ updateLevelUI(loadLevelState()); })();
+
+    function parseJwt(token) {
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // Cuando Google devuelve credenciales, guardarlas en localStorage y sessionStorage (redundancia)
+    function handleCredentialResponse(response) {
+      const payload = parseJwt(response?.credential || '');
+      if (!payload) return;
+      const profile = { name: payload.name, email: payload.email, picture: payload.picture };
+      try {
+        // persistir en localStorage para accesos futuros y en sessionStorage para la pestaña actual
+        localStorage.setItem('g_profile', JSON.stringify(profile));
+        sessionStorage.setItem('g_profile', JSON.stringify(profile));
+        sessionStorage.setItem('g_token', response.credential || '');
+      } catch (err) {
+        console.warn('Storage blocked or unavailable:', err);
+      }
+      applyProfile(profile, response.credential);
+    }
+
+    function applyProfile(payload, credential){
+      const pic = document.getElementById('profilePic');
+      pic.src = payload.picture || 'https://via.placeholder.com/40';
+      pic.onerror = () => { pic.src = 'https://via.placeholder.com/40?text=U'; };
+      document.getElementById('profileName').textContent = payload.name || payload.email || 'Usuario';
+      // mostrar widget de usuario y ocultar gSignInDiv (botón de Google)
+      const gbtn = document.getElementById('gSignInDiv');
+      if (gbtn) gbtn.style.display = 'none';
+      pic.style.display = 'block';
+      document.getElementById('profileName').style.display = 'block';
+      document.getElementById('signOutBtn').style.display = 'inline-block';
+      try {
+        if (credential) sessionStorage.setItem('g_token', credential);
+        sessionStorage.setItem('g_profile', JSON.stringify(payload));
+        localStorage.setItem('g_profile', JSON.stringify(payload));
+      } catch (err) { console.warn('Session storage blocked:', err); }
+
+    // Enviar/registrar usuario al backend
+    (async function upsertRemote(){
+      try {
+        await fetch('/api/upsert-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: payload.email, name: payload.name, picture: payload.picture })
+        });
+      } catch (e) {
+        // backend no disponible -> seguimos usando localStorage
+        console.warn('No se pudo registrar usuario en servidor:', e);
+      }
+    })();
+    }
+
+    // Intento centralizado para leer perfil desde sessionStorage/localStorage y aplicarlo
+    function loadAndApplyProfile() {
+      try {
+        const s = sessionStorage.getItem('g_profile');
+        const l = localStorage.getItem('g_profile');
+        const raw = s || l;
+        if (!raw) return null;
+        const prof = JSON.parse(raw);
+        if (prof && prof.name) {
+          applyProfile(prof, sessionStorage.getItem('g_token') || '');
+          return prof;
+        }
+      } catch (e) { console.warn('Error leyendo perfil:', e); }
+      return null;
+    }
+
+    // Fallback UI simple cuando GSI no está disponible (muestra opción invitado)
+    function showGsiFallback() {
+      try {
+        const container = document.getElementById('gSignInDiv');
+        if (!container) return;
+        if (container.querySelector('#gFallbackLogin')) return;
+        const d = document.createElement('div');
+        d.id = 'gFallbackLogin';
+        d.style.display = 'flex';
+        d.style.flexDirection = 'column';
+        d.style.gap = '8px';
+        d.style.alignItems = 'center';
+        d.innerHTML = `<div style="color:#fff;font-size:13px">No disponible: inicio Google</div>
+                       <button id="guestContinue" style="background:#fff;color:#000;border-radius:8px;padding:8px 12px;border:none;cursor:pointer">Continuar como invitado</button>`;
+        container.appendChild(d);
+        d.querySelector('#guestContinue').addEventListener('click', ()=> {
+          // continuar sin perfil
+          try { localStorage.removeItem('g_profile'); sessionStorage.removeItem('g_profile'); } catch(e){}
+          // mantener vista de invitado, no redirigir
+        });
+      } catch (e) { console.warn('No se pudo mostrar fallback GSI:', e); }
+    }
+
+    function signOut() {
+      // Limpiar sesión y mostrar estado invitado en header
+      try {
+        sessionStorage.removeItem('g_token');
+        sessionStorage.removeItem('g_profile');
+        localStorage.removeItem('g_profile');
+      } catch (err) { /* ignore storage errors */ }
+      const pic = document.getElementById('profilePic');
+      pic.src = 'https://via.placeholder.com/40';
+      pic.style.display = 'none';
+      document.getElementById('profileName').textContent = 'Invitado';
+      document.getElementById('profileName').style.display = 'none';
+      document.getElementById('gSignInDiv').style.display = 'block';
+      document.getElementById('signOutBtn').style.display = 'none';
+      // redirige al login (index.html)
+      window.location.href = 'index.html';
+    }
+
+    window.addEventListener('load', () => {
+      // sincronizar UI de nivel al cargar
+      updateLevelUI(loadLevelState());
+      // Aplicar resultado pendiente del quiz si existe (guardado en quiz.js)
+      try {
+        const pending = localStorage.getItem('g_quiz_result');
+        if (pending) {
+          const obj = JSON.parse(pending);
+          if (obj && (typeof obj.correct === 'number')) {
+            // llamar a la API interna que ya calcula delta según correct/wrong
+            try { handleQuizResult({ correct: obj.correct, wrong: obj.wrong }); } catch(e) { console.warn('handleQuizResult no disponible:', e); }
+          }
+          // eliminar para no aplicarlo dos veces
+          localStorage.removeItem('g_quiz_result');
+        }
+      } catch (err) {
+        console.warn('No se pudo aplicar resultado pendiente del quiz:', err);
+      }
+
+      // Solo intentar cargar GSI si estamos en http(s); en file:// o cuando google no exista -> fallback
+      const tryInitGsi = () => {
+        // si no estamos en http(s) o la librería no está disponible, mostrar fallback
+        if (!location.protocol.startsWith('http') || !(window.google && google.accounts && google.accounts.id)) {
+          showGsiFallback();
+          return;
+        }
+        try {
+          google.accounts.id.initialize({ client_id: CLIENT_ID, callback: handleCredentialResponse, auto_select: false });
+          google.accounts.id.renderButton(document.getElementById('gSignInDiv'), { theme: "outline", size: "large", text: "signin_with" });
+        } catch (e) {
+          console.warn('GSI init failed:', e);
+          showGsiFallback();
+        }
+      };
+      // intentar ahora y de nuevo tras corta espera (por si el script aún carga)
+      tryInitGsi();
+      setTimeout(tryInitGsi, 800);
+
+      // Restaurar perfil desde storage (proteger con try/catch)
+      try {
+        // usar la función centralizada
+        loadAndApplyProfile();
+      } catch (err) { console.warn('No se pudo acceder al storage:', err); }
+
+      // Ajustar botón cerrar sesión
+      document.getElementById('signOutBtn').addEventListener('click', signOut);
+    });
+
+    // Enlace del nuevo botón: redirige al quiz (accesible también con Enter)
+    (function(){
+      const enterBtn = document.getElementById('enterQuizBtn');
+      const enterCard = document.getElementById('enterQuizCard');
+      function goToQuiz(){ window.location.href = 'quiz.html'; }
+      if (enterBtn) enterBtn.addEventListener('click', goToQuiz);
+      if (enterCard) enterCard.addEventListener('keydown', (e)=>{ if (e.key === 'Enter') goToQuiz(); });
+    })();
+
+    // Toast flotante que no afecta layout; se oculta automáticamente y se desplaza hacia abajo al desaparecer
+    function showLevelToast(message, type = 'success'){
+      try {
+        const t = document.createElement('div');
+        t.className = 'level-toast ' + (type === 'warn' ? 'warn' : 'success');
+        t.innerHTML = `<div class="star">⭐</div><div class="msg">${message}</div>`;
+        document.body.appendChild(t);
+        // forzar frame then show
+        requestAnimationFrame(()=> t.classList.add('show'));
+        // hide after delay and remove
+        const visibleMs = 3400;
+        setTimeout(()=>{
+          t.classList.remove('show');
+          t.classList.add('hide');
+          setTimeout(()=> t.remove(), 700);
+        }, visibleMs);
+      } catch (e) { /* silencioso si falla DOM */ }
+    }
+
+    /* === Leaderboard (registro de inicios / niveles) ===
+       - localStorage key: 'g_leaderboard' => array de { id, name, email, level, xp, lastLogin }
+       - upsertUserRecord(profile) se llama al iniciar sesión
+       - updateUserRecordLevel(state) actualiza level/xp para el usuario actual
+    */
+    const LEADER_KEY = 'g_leaderboard';
+
+    function loadLeaderboard() {
+      try {
+        const raw = localStorage.getItem(LEADER_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) { return []; }
+    }
+    function saveLeaderboard(list) {
+      try { localStorage.setItem(LEADER_KEY, JSON.stringify(list)); } catch (e) { console.warn('No se pudo guardar leaderboard', e); }
+    }
+
+    function getCurrentProfile() {
+      try {
+        const s = sessionStorage.getItem('g_profile');
+        const l = localStorage.getItem('g_profile');
+        const raw = s || l;
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) { return null; }
+    }
+
+    function upsertUserRecord(profile) {
+      if (!profile) return;
+      const list = loadLeaderboard();
+      const email = profile.email || ('guest_' + (Date.now()));
+      const idx = list.findIndex(u => u.email === email);
+      const levelState = loadLevelState();
+      const record = {
+        id: email,
+        name: profile.name || profile.email || 'Usuario',
+        email: email,
+        level: levelState.level || 1,
+        xp: levelState.xp || 0,
+        lastLogin: Date.now()
+      };
+      if (idx >= 0) {
+        list[idx] = { ...list[idx], ...record };
+      } else {
+        list.push(record);
+      }
+      saveLeaderboard(list);
+    }
+
+    function updateUserRecordLevel(state) {
+      if (!state) return;
+      const prof = getCurrentProfile();
+      if (!prof) return;
+      const email = prof.email || ('guest_' + (Date.now()));
+      const list = loadLeaderboard();
+      const idx = list.findIndex(u => u.email === email);
+      const entry = { level: state.level, xp: state.xp, lastLogin: Date.now() };
+      if (idx >= 0) {
+        list[idx] = { ...list[idx], ...entry };
+      } else {
+        // si no existía, crear registro mínimo
+        list.push({ id: email, name: prof.name || prof.email || 'Usuario', email, ...entry });
+      }
+      saveLeaderboard(list);
+    }
+
+    // Llamar a upsert cuando se aplica perfil
+    const origApplyProfile = applyProfile;
+    applyProfile = function(payload, credential) {
+      origApplyProfile(payload, credential);
+      try { upsertUserRecord(payload); } catch(e){ console.warn('No se pudo actualizar leaderboard en applyProfile', e); }
+    };
+
+    // Asegurar que cuando handleQuizResult cambia niveles se actualice el registro del usuario
+    const origHandleQuizResult = window.handleQuizResult;
+    window.handleQuizResult = function(input){
+      const result = origHandleQuizResult(input);
+      const state = (result && result.level) ? result : loadLevelState();
+      try { updateUserRecordLevel(state); } catch(e){ console.warn('No se pudo sincronizar leaderboard tras quiz', e); }
+      // Intentar sincronizar con backend
+      (async function syncLevel(){
+        try {
+          const prof = getCurrentProfile();
+          if (!prof || !prof.email) return;
+          await fetch('/api/upsert-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: prof.email, name: prof.name, picture: prof.picture })
+          });
+          // optionally call /api/quiz-result with zero values to sync level (server compute)
+          await fetch('/api/quiz-result', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: prof.email, correct: 0, wrong: 0 })
+          });
+        } catch (e) { /* ignore server sync failures */ }
+      })();
+      return result;
+    };
+  </script>
+</body>
+</html>

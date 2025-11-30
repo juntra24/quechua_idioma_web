@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Quechua Lenguaje de nuestros Ancestros</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="chat.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+      body{
+        font-family:Arial,Helvetica,sans-serif;
+        margin:0;
+        height:100vh;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        /* background handled by overlay layers (js) */
+      }
+      .hero-title{
+        position: absolute;
+        top:28px;
+        left:50%;
+        transform:translateX(-50%);
+        color: #fff;
+        font-size:34px; /* aumentado */
+        font-weight:800;
+        text-shadow: 0 3px 10px rgba(0,0,0,0.55);
+        text-align:center;
+        padding:0 12px;
+        z-index:3;
+      }
+      .login-card{
+        width:380px;
+        background: rgba(220, 38, 38, 0.95); /* rojo */
+        border-radius:12px;
+        padding:32px;
+        box-shadow:0 12px 30px rgba(2,6,23,0.12);
+        text-align:center;
+        z-index:2;
+      }
+      .brand{font-size:20px;font-weight:700;margin-bottom:6px;color:#fff;} /* texto blanco sobre rojo */
+      .lead{color:rgba(255,255,255,0.9);margin-bottom:18px;}
+      .hidden{display:none !important;}
+      /* logo fijado en la esquina superior derecha del viewport (fuera del contenedor) */
+      .page-logo{
+        position:fixed;
+        top:16px;
+        right:16px;
+        width:88px;
+        height:56px;
+        object-fit:cover;
+        border-radius:8px;
+        z-index:4;
+        box-shadow:0 6px 18px rgba(0,0,0,0.35);
+      }
+      /* overlays para cross-fade de fondos */
+      .bg-overlay{
+        position:fixed;
+        top:0;left:0;width:100%;height:100%;
+        background-size:cover;
+        background-position:center;
+        background-repeat:no-repeat;
+        transition: opacity 1s ease-in-out;
+        pointer-events:none;
+        z-index:0;
+        opacity:0;
+      }
+      .bg-overlay.visible{ opacity:1; }
+    </style>
+</head>
+<body>
+  <!-- capas de fondo (fuera del flujo, controladas por JS) -->
+  <div id="bg1" class="bg-overlay"></div>
+  <div id="bg2" class="bg-overlay"></div>
+   <!-- título principal -->
+   <div class="hero-title">Quechua Lenguaje de nuestros Ancestros</div>
+ 
+   <!-- logo sobre el fondo (fuera del contenedor) -->
+   <img src="icon.png" alt="logo" class="page-logo">
+ 
+   <!-- Pantalla de inicio de sesión presentable (debajo del título) -->
+   <div class="login-card" id="loginCard">
+     <div class="brand">Iniciar sesión</div>
+     <p class="lead">Accede con tu cuenta de Google para continuar</p>
+ 
+     <!-- Contenedor del botón de Google -->
+     <div id="gSignInDiv"></div>
+ 
+     <p style="font-size:13px;color:#9aa3b2;margin-top:14px;">Al continuar aceptas los términos de uso.</p>
+   </div>
+ 
+   <script>
+    // filepath: c:\Users\01\Downloads\sitio web- apre-quechua2\chat.html (script section)
+    const CLIENT_ID = '903625348841-47re2o6srlb8176st4pob617oo91im4d.apps.googleusercontent.com';
+ 
+    function showGsiFallbackLogin() {
+      if (document.getElementById('gSignInDiv').querySelector('#gFallbackLogin')) return;
+      const d = document.createElement('div');
+      d.id = 'gFallbackLogin';
+      d.style.marginTop = '8px';
+      d.style.fontSize = '13px';
+      d.style.color = '#555';
+      d.innerHTML = `
+        <div style="margin-bottom:8px;">No se puede cargar el botón de Google aquí.</div>
+        <div style="margin-bottom:10px;color:#777;font-size:12px;">Asegúrate de registrar el origen (http://localhost:3000 o tu URL) en la consola de Google o prueba otro navegador.</div>
+        <button id="guestToIndex" style="background:#0b74ff;color:#fff;border:none;padding:8px 10px;border-radius:8px;cursor:pointer;">Continuar como invitado</button>
+      `;
+      const container = document.getElementById('gSignInDiv');
+      if (container) container.appendChild(d);
+      d.querySelector('#guestToIndex').addEventListener('click', () => {
+        // continuar a index sin perfil google
+        window.location.href = 'dashboard.html';
+      });
+    }
+ 
+    function parseJwt(token) {
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+      } catch (e) {
+        return null;
+      }
+    }
+ 
+    function handleCredentialResponse(response) {
+      const payload = parseJwt(response?.credential || '');
+      if (!payload) return;
+      // Guardar perfil en localStorage (para sincronizar con index.html)
+      const profile = { name: payload.name, email: payload.email, picture: payload.picture };
+      try {
+        localStorage.setItem('g_profile', JSON.stringify(profile));
+        sessionStorage.setItem('g_token', response.credential);
+      } catch (err) {
+        console.warn('Storage blocked during login:', err);
+      }
+      // Redirigir a index.html
+      window.location.href = 'dashboard.html';
+    }
+ 
+    /* Background rotation: lista de imágenes y timing */
+    (function(){
+      const images = ['fondo.png','fondo2.png','fondo3.png']; // añadir o reordenar nombres según archivos
+      const intervalMs = 8000; // tiempo entre cambios
+      // preload
+      images.forEach(src => { const i = new Image(); i.src = src; });
+ 
+      const el1 = document.getElementById('bg1');
+      const el2 = document.getElementById('bg2');
+      if (!el1 || !el2) return;
+ 
+      let cur = 0;
+      el1.style.backgroundImage = `url('${images[0]}')`;
+      el1.classList.add('visible');
+      el2.style.backgroundImage = `url('${images.length>1?images[1]:images[0]}')`;
+      let visibleEl = el1, hiddenEl = el2;
+ 
+      setInterval(() => {
+        const next = (cur + 1) % images.length;
+        // prepare hidden with next image
+        hiddenEl.style.backgroundImage = `url('${images[next]}')`;
+        // crossfade
+        hiddenEl.classList.add('visible');
+        visibleEl.classList.remove('visible');
+        // swap after transition
+        setTimeout(() => {
+          const tmp = visibleEl; visibleEl = hiddenEl; hiddenEl = tmp;
+          cur = next;
+        }, 1000); // debe coincidir con transition duration
+      }, intervalMs);
+    })();
+ 
+    // Inicializar botón Google con comprobaciones y fallback
+    window.addEventListener('load', () => {
+      const tryInit = () => {
+        const container = document.getElementById('gSignInDiv');
+        if (!container) return;
+        // Si no estamos en http(s) o la librería no está disponible, mostrar fallback
+        if (!location.protocol.startsWith('http') || !(window.google && google.accounts && google.accounts.id)) {
+          showGsiFallbackLogin();
+          return;
+        }
+        try {
+          google.accounts.id.initialize({ client_id: CLIENT_ID, callback: handleCredentialResponse, auto_select: false });
+          google.accounts.id.renderButton(container, { theme: "outline", size: "large", text: "signin_with" });
+        } catch (err) {
+          console.warn('GSI init failed (chat):', err);
+          showGsiFallbackLogin();
+        }
+      };
+ 
+      // Intentar inicializar ahora y después de un pequeño retraso (por si el script aún carga)
+      tryInit();
+      setTimeout(tryInit, 800);
+ 
+      // Si ya hay sesión guardada localmente, redirigir automáticamente a index.html (proteger con try/catch)
+      try {
+        const saved = localStorage.getItem('g_profile');
+        if (saved) window.location.href = 'dashboard.html';
+      } catch (err) {
+        console.warn('No se pudo acceder a localStorage:', err);
+      }
+    });
+   </script>
+</body>
+</html>

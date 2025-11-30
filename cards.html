@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Jugar en Línea — Aprende Quechua</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root{ --primary:#dc2626; --muted:#6b7280; font-family:Poppins,system-ui,Arial; }
+    body{ margin:0;background:#fafafa;color:#111; }
+    header{ background:var(--primary); color:#fff; padding:12px 16px; display:flex;align-items:center;justify-content:space-between; }
+    main{ padding:16px; max-width:1000px;margin:18px auto; }
+    .panel{ background:#fff;padding:14px;border-radius:10px;box-shadow:0 8px 24px rgba(2,6,23,0.06); }
+    .row{ display:flex;gap:12px;align-items:center;flex-wrap:wrap; }
+    input,select,button{ padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:14px; }
+    button.primary{ background:var(--primary);color:#fff;border:none;cursor:pointer;font-weight:700; }
+    .rooms-grid{ display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px; }
+    .room-card{ border:1px solid #ddd;padding:12px;border-radius:8px;background:#fff;cursor:pointer;transition:all .2s; }
+    .room-card:hover{ box-shadow:0 6px 18px rgba(0,0,0,0.1);transform:translateY(-2px); }
+    .room-card.creating-quiz{ background:linear-gradient(135deg,rgba(220,38,38,0.08),rgba(255,255,255,0.9)); }
+    .small{ color:var(--muted);font-size:13px; }
+    .quiz-builder{ margin-top:12px;padding:12px;background:#f9f9f9;border-radius:8px; }
+    .question-form{ display:flex;flex-direction:column;gap:8px;margin-bottom:12px; }
+    .options-input{ display:flex;flex-direction:column;gap:6px; }
+    .results-table{ width:100%;border-collapse:collapse;margin-top:12px; }
+    th,td{ padding:10px;border-bottom:1px solid #eee;text-align:left; }
+    th{ font-weight:600;background:#f3f4f6; }
+  </style>
+</head>
+<body>
+  <header>
+    <div><strong>Jugar en Línea</strong></div>
+    <div><a href="dashboard.html" style="color:#fff;text-decoration:none">Volver</a></div>
+  </header>
+
+  <main>
+    <div class="panel">
+      <h3>Crear o Unirse a Sala</h3>
+      <div class="row">
+        <button id="createRoomBtn" class="primary">+ Crear Sala</button>
+        <input id="joinRoomInput" placeholder="Código de sala (ej: ABC123)"/>
+        <button id="joinRoomBtn">Unirse</button>
+        <button id="refreshRoomsBtn">Refrescar</button>
+      </div>
+      <div style="margin-top:8px;font-size:13px;color:var(--muted)">
+        <label>
+          Min jugadores: 
+          <select id="minPlayersSelect"><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
+        </label>
+        <label style="margin-left:12px;">
+          Máx jugadores: 
+          <select id="maxPlayersSelect"><option value="2">2</option><option value="3">3</option><option value="4" selected>4</option></select>
+        </label>
+      </div>
+
+      <h3 style="margin-top:18px;">Salas Disponibles</h3>
+      <div id="roomsList" class="rooms-grid"></div>
+
+      <div id="myRoomSection" style="display:none;margin-top:18px;">
+        <h3>Mi Sala: <span id="myRoomId"></span></h3>
+        <div id="myRoomStatus" class="small"></div>
+        
+        <!-- QUIZ BUILDER: visible si creador y status='creating_quiz' -->
+        <div id="quizBuilder" class="quiz-builder" style="display:none;">
+          <h4>Crear Preguntas del Quiz</h4>
+          <div class="question-form">
+            <input id="questionInput" placeholder="Pregunta..."/>
+            <div class="options-input">
+              <input id="option0" placeholder="Opción 1"/>
+              <input id="option1" placeholder="Opción 2"/>
+              <input id="option2" placeholder="Opción 3"/>
+              <input id="option3" placeholder="Opción 4 (opcional)"/>
+            </div>
+            <div>
+              <label>Respuesta correcta (índice):
+                <select id="correctIndex"><option value="0">1</option><option value="1">2</option><option value="2">3</option><option value="3">4</option></select>
+              </label>
+            </div>
+            <button id="addQuestionBtn" class="primary">Añadir Pregunta</button>
+          </div>
+          <div id="questionsList" style="margin-top:12px;"></div>
+          <button id="finishQuizBtn" class="primary" style="margin-top:8px;">Terminar Quiz y Esperar Jugadores</button>
+        </div>
+
+        <div id="participants" style="margin-top:12px;"></div>
+        <button id="startGameBtn" class="primary" style="display:none;margin-top:8px;">Iniciar Quiz</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+  (function(){
+    function qs(name){ const url = new URL(window.location.href); return url.searchParams.get(name); }
+    function getProfile(){ try { return JSON.parse(sessionStorage.getItem('g_profile') || localStorage.getItem('g_profile') || 'null'); } catch(e){ return null; } }
+    function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, (m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+    const roomsListEl = document.getElementById('roomsList');
+    const myRoomSectionEl = document.getElementById('myRoomSection');
+    const myRoomIdEl = document.getElementById('myRoomId');
+    const myRoomStatusEl = document.getElementById('myRoomStatus');
+    const quizBuilderEl = document.getElementById('quizBuilder');
+    const participantsEl = document.getElementById('participants');
+    const startGameBtn = document.getElementById('startGameBtn');
+    const createRoomBtn = document.getElementById('createRoomBtn');
+    const joinRoomBtn = document.getElementById('joinRoomBtn');
+    const joinRoomInput = document.getElementById('joinRoomInput');
+    const refreshRoomsBtn = document.getElementById('refreshRoomsBtn');
+    const addQuestionBtn = document.getElementById('addQuestionBtn');
+    const finishQuizBtn = document.getElementById('finishQuizBtn');
+    const questionListEl = document.getElementById('questionsList');
+
+    let myRoomId = null;
+    let pollInterval = null;
+    let currentQuiz = [];
+
+    async function fetchRooms(){
+      try {
+        const r = await fetch('/api/rooms');
+        const j = await r.json();
+        if (j && j.ok && Array.isArray(j.list)) return j.list;
+      } catch(e){}
+      return [];
+    }
+
+    function renderRoomsList(list){
+      roomsListEl.innerHTML = '';
+      if (!list || !list.length) { roomsListEl.innerHTML = '<div class="small">No hay salas disponibles</div>'; return; }
+      list.forEach(r => {
+        const d = document.createElement('div');
+        d.className = 'room-card' + (r.status === 'creating_quiz' ? ' creating-quiz' : '');
+        d.innerHTML = `<div><strong>${r.roomId}</strong> <span class="small">(${r.participants?.length||0}/${r.config?.maxPlayers||4})</span></div>
+                       <div class="small">Creador: ${escapeHtml(r.creatorName||'--')}</div>
+                       <div class="small" style="margin-top:6px;">${r.status === 'creating_quiz' ? '📝 Creando quiz...' : '⏳ Esperando jugadores'}</div>
+                       <button data-room="${r.roomId}" class="joinNowBtn" style="margin-top:8px;width:100%;background:var(--primary);color:#fff;border:none;border-radius:6px;padding:6px;cursor:pointer;">Unirse</button>`;
+        roomsListEl.appendChild(d);
+      });
+      Array.from(document.querySelectorAll('.joinNowBtn')).forEach(b => {
+        b.addEventListener('click', () => joinRoom(b.dataset.room));
+      });
+    }
+
+    async function createRoom(){
+      const prof = getProfile();
+      if (!prof) { alert('Necesitas iniciar sesión'); return; }
+      const minP = parseInt(document.getElementById('minPlayersSelect').value || '2', 10);
+      const maxP = parseInt(document.getElementById('maxPlayersSelect').value || '4', 10);
+      const body = { email: prof.email, name: prof.name, picture: prof.picture, minPlayers: minP, maxPlayers: maxP };
+      try {
+        const r = await fetch('/api/create-room', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        const j = await r.json();
+        if (j && j.ok && j.room) {
+          setMyRoom(j.room.roomId, j.room);
+        } else {
+          alert('Error creando sala: ' + (j && j.error ? j.error : 'desconocido'));
+        }
+      } catch(e){ alert('Error: ' + e.message); }
+    }
+
+    async function joinRoom(roomId){
+      const prof = getProfile();
+      if (!prof) { alert('Necesitas iniciar sesión'); return; }
+      const body = { roomId, email: prof.email, name: prof.name, picture: prof.picture };
+      try {
+        const r = await fetch('/api/join-room', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        const j = await r.json();
+        if (j && j.ok && j.room) {
+          setMyRoom(j.room.roomId, j.room);
+        } else {
+          alert('No se pudo unir: ' + (j && j.error ? j.error : 'error'));
+        }
+      } catch(e){ alert('Error: ' + e.message); }
+    }
+
+    function setMyRoom(roomId, room){
+      myRoomId = roomId;
+      myRoomIdEl.textContent = roomId;
+      myRoomSectionEl.style.display = 'block';
+      if (pollInterval) clearInterval(pollInterval);
+      pollInterval = setInterval(pollRoom, 1500);
+      pollRoom();
+    }
+
+    async function pollRoom(){
+      if (!myRoomId) return;
+      try {
+        const r = await fetch('/api/room/' + myRoomId);
+        const j = await r.json();
+        if (j && j.ok && j.room) {
+          const room = j.room;
+          const prof = getProfile();
+          const amCreator = prof && prof.email && (prof.email === room.creatorEmail);
+          
+          // mostrar estado
+          myRoomStatusEl.innerHTML = `<strong>Estado:</strong> ${room.status === 'creating_quiz' ? '📝 Creando Quiz' : room.status === 'waiting' ? '⏳ Esperando' : '🎮 Activo'}<br/>
+                                     <strong>Participantes:</strong> ${room.participants?.length||0}/${room.config?.maxPlayers||4}`;
+
+          // mostrar quiz builder solo si creador y creating_quiz
+          quizBuilderEl.style.display = (amCreator && room.status === 'creating_quiz') ? 'block' : 'none';
+          currentQuiz = room.quiz || [];
+          renderQuestionsList();
+
+          // mostrar participantes
+          participantsEl.innerHTML = '<strong>Jugadores:</strong><br/>';
+          (room.participants || []).forEach(p => {
+            participantsEl.innerHTML += `${escapeHtml(p.name || p.email)}<br/>`;
+          });
+
+          // mostrar botón iniciar si creador, status waiting, y suficientes jugadores
+          const minReq = room.config?.minPlayers || 2;
+          startGameBtn.style.display = (amCreator && room.status === 'waiting' && (room.participants?.length || 0) >= minReq) ? 'inline-block' : 'none';
+
+          // si quiz_active redirigir a play
+          if (room.status === 'quiz_active') {
+            window.location.href = 'quiz_play.html?room=' + encodeURIComponent(myRoomId);
+          }
+        }
+      } catch(e){ console.warn(e); }
+    }
+
+    function renderQuestionsList(){
+      questionListEl.innerHTML = '';
+      currentQuiz.forEach((q, idx) => {
+        const d = document.createElement('div');
+        d.style.marginBottom = '8px';
+        d.style.padding = '8px';
+        d.style.background = '#f3f4f6';
+        d.style.borderRadius = '6px';
+        d.innerHTML = `<strong>P${idx+1}:</strong> ${escapeHtml(q.question)}<br/><small>Respuesta: ${q.options[q.correct]}</small>`;
+        questionListEl.appendChild(d);
+      });
+      questionListEl.innerHTML += `<div style="margin-top:8px;font-size:13px;color:var(--muted)"><strong>Total:</strong> ${currentQuiz.length} preguntas</div>`;
+    }
+
+    async function addQuestion(){
+      if (!myRoomId) return;
+      const prof = getProfile();
+      const q = document.getElementById('questionInput').value.trim();
+      const opts = [document.getElementById('option0').value.trim(), document.getElementById('option1').value.trim(), document.getElementById('option2').value.trim(), document.getElementById('option3').value.trim()].filter(o=>o);
+      const correct = parseInt(document.getElementById('correctIndex').value, 10);
+      if (!q || opts.length < 2 || correct >= opts.length) {
+        alert('Completa pregunta y al menos 2 opciones válidas');
+        return;
+      }
+      try {
+        const r = await fetch('/api/add-question', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ roomId: myRoomId, creatorEmail: prof.email, question: q, options: opts, correct }) });
+        const j = await r.json();
+        if (j && j.ok) {
+          document.getElementById('questionInput').value = '';
+          document.getElementById('option0').value = '';
+          document.getElementById('option1').value = '';
+          document.getElementById('option2').value = '';
+          document.getElementById('option3').value = '';
+          currentQuiz = j.quiz || [];
+          renderQuestionsList();
+        } else {
+          alert('Error: ' + (j && j.error ? j.error : 'desconocido'));
+        }
+      } catch(e){ alert('Error: ' + e.message); }
+    }
+
+    async function finishQuizCreation(){
+      if (!myRoomId || currentQuiz.length < 1) {
+        alert('Debes crear al menos 1 pregunta');
+        return;
+      }
+      const prof = getProfile();
+      try {
+        const r = await fetch('/api/finish-quiz-creation', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ roomId: myRoomId, creatorEmail: prof.email }) });
+        const j = await r.json();
+        if (j && j.ok) {
+          quizBuilderEl.style.display = 'none';
+          await pollRoom();
+        } else {
+          alert('Error: ' + (j && j.error ? j.error : 'desconocido'));
+        }
+      } catch(e){ alert('Error: ' + e.message); }
+    }
+
+    async function startGame(){
+      if (!myRoomId) return alert('Sin sala');
+      const prof = getProfile();
+      try {
+        const r = await fetch('/api/start-quiz', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ roomId: myRoomId, starterEmail: prof.email }) });
+        const j = await r.json();
+        if (j && j.ok) {
+          window.location.href = 'quiz_play.html?room=' + encodeURIComponent(myRoomId);
+        } else {
+          alert('Error: ' + (j && j.error ? j.error : 'desconocido'));
+        }
+      } catch(e){ alert('Error: ' + e.message); }
+    }
+
+    createRoomBtn.addEventListener('click', createRoom);
+    joinRoomBtn.addEventListener('click', () => joinRoom(joinRoomInput.value.trim().toUpperCase()));
+    refreshRoomsBtn.addEventListener('click', () => fetchRooms().then(l => renderRoomsList(l)));
+    addQuestionBtn.addEventListener('click', addQuestion);
+    finishQuizBtn.addEventListener('click', finishQuizCreation);
+    startGameBtn.addEventListener('click', startGame);
+
+    // initial load
+    fetchRooms().then(l => renderRoomsList(l));
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="qu">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Quiz - Aprende Quechua</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* barra de XP en el quiz (session XP visual) */
+    .xp-wrap{ display:flex; align-items:center; gap:12px; margin-left:16px; }
+    .xp-badge{ background:#f3f4f6;color:#111;padding:6px 10px;border-radius:999px;font-weight:700;font-size:13px; }
+    .xp-bar-wrap{ width:220px; height:10px; background:#e6e6e6;border-radius:999px; overflow:hidden; }
+    .xp-bar{ height:100%; width:0%; background:linear-gradient(90deg,#f97316,#ef4444); transition: width .4s ease; }
+    .xp-text{ font-size:13px;color:#374151; min-width:64px; text-align:right; }
+    @media (max-width:640px){ .xp-bar-wrap{ width:140px; } .xp-text{ font-size:12px; } }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <h1>Quiz de Quechua</h1>
+  </header>
+
+  <main class="page-content">
+    <section class="quiz-container">
+      <div class="quiz-intro" id="quiz-intro">
+        <h2>Quiz de Quechua</h2>
+        <p>Tienes 5 minutos para responder 15 preguntas</p>
+        <button id="start-quiz" class="btn primary">Empezar Quiz</button>
+      </div>
+
+      <div id="quiz-game" class="hidden">
+        <div class="quiz-header" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div style="display:flex;align-items:center;gap:14px">
+            <div class="timer">
+              <span id="minutes">05</span>:<span id="seconds">00</span>
+            </div>
+            <div class="progress">
+              Pregunta <span id="current-question">0</span>/15
+            </div>
+          </div>
+
+          <!-- XP session bar: sube/baja en cada respuesta -->
+          <div class="xp-wrap" aria-hidden="false">
+            <div class="xp-badge">XP</div>
+            <div class="xp-bar-wrap" title="XP de esta sesión">
+              <div id="xpBar" class="xp-bar"></div>
+            </div>
+            <div id="xpText" class="xp-text">0 / 100</div>
+          </div>
+        </div>
+
+        <div class="question-container">
+          <p id="question-text" class="question-text"></p>
+          <div class="options-container">
+
+          </div>
+        </div>
+      </div>
+
+      <div id="quiz-result" class="hidden">
+        <h3>Resultados</h3>
+        <p>Respondiste correctamente: <span id="correct-answers">0</span>/15</p>
+        <button id="retry-quiz" class="btn primary">Intentar de nuevo</button>
+      </div>
+    </section>
+  </main>
+
+  <div class="return-footer">
+    <a class="return-btn" href="dashboard.html">Volver</a>
+  </div>
+  <script src="quiz.js"></script>
+
+  <script>
+  // filepath: c:\Users\01\Downloads\sitio web- apre-quechua2\quiz.html (result-to-level bridge)
+  (function(){
+    const RESULT_EL = document.getElementById('quiz-result');
+    const CORRECT_EL = document.getElementById('correct-answers');
+    const TOTAL_Q = 15; // coincide con la UI actual
+    if (!RESULT_EL || !CORRECT_EL) return;
+
+    // Observador de cambios en atributos (detecta cuando se remueve la clase 'hidden')
+    const mo = new MutationObserver((mutations) => {
+      for (const m of mutations){
+        if (m.attributeName === 'class'){
+          const cls = RESULT_EL.className || '';
+          if (!cls.includes('hidden')){
+            // resultado visible -> tomar count y llamar a handleQuizResult
+            const correct = parseInt(CORRECT_EL.textContent || '0', 10) || 0;
+            const wrong = Math.max(0, TOTAL_Q - correct);
+            try {
+              if (window.handleQuizResult) {
+                window.handleQuizResult({ correct: correct, wrong: wrong });
+              } else {
+                console.warn('handleQuizResult no disponible en window');
+              }
+            } catch (e) {
+              console.error('Error llamando handleQuizResult:', e);
+            }
+            // una sola vez por aparición (evita múltiples llamadas)
+            // opcional: desconectar si no deseas más observaciones
+            // mo.disconnect();
+          }
+        }
+      }
+    });
+    mo.observe(RESULT_EL, { attributes: true });
+  })();
+  </script>
+</body>
+</html>

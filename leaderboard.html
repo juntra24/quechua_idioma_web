@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Clasificación — Aprende Quechua</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root{ --bg:#fff; --card:#fff; --primary:#dc2626; --muted:#6b7280; font-family:Poppins,system-ui,Arial; }
+    body{ margin:0; background:var(--bg); color:#111; }
+    header{ background:var(--primary); color:#fff; padding:14px 18px; display:flex;align-items:center;justify-content:space-between; }
+    header h1{ margin:0;font-size:18px; }
+    main{ padding:18px; max-width:1100px; margin:18px auto; }
+    .card{ background:#fff;border-radius:12px;padding:16px; box-shadow:0 8px 30px rgba(2,6,23,0.06); }
+    table{ width:100%; border-collapse:collapse; }
+    th,td{ padding:10px 12px; text-align:left; border-bottom:1px solid #eef2f7; }
+    th{ font-weight:600; color:var(--muted); font-size:13px; }
+    .level-badge{ background:rgba(220,38,38,0.08); color:var(--primary); padding:6px 10px; border-radius:10px; font-weight:700; }
+    .pct{ font-weight:700; color:#111; }
+    .small{ color:var(--muted); font-size:12px; }
+    .actions{ display:flex;gap:10px; align-items:center; }
+    .btn{ background:#fff;color:var(--primary);border:1px solid rgba(220,38,38,0.08);padding:8px 10px;border-radius:8px;cursor:pointer;font-weight:600;}
+    @media (max-width:720px){ th,td{ padding:8px; font-size:13px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Clasificación — Aprende Quechua</h1>
+    <div class="actions">
+      <a class="btn" href="dashboard.html">Volver</a>
+      <button id="refreshBtn" class="btn">Refrescar</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="card">
+      <h3>Tabla de puntajes</h3>
+      <div style="overflow:auto;margin-top:12px">
+        <table id="leaderTable" aria-live="polite">
+          <thead>
+            <tr><th>#</th><th>Nombre</th><th>Email</th><th>Nivel</th><th>Progreso</th><th>Último acceso</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script>
+  (function(){
+    const KEY = 'g_leaderboard';
+    const API = '/api/leaderboard';
+    const XP_PER_LEVEL = 100;
+    const MAX_LEVEL = 10;
+
+    function loadListLocal(){ try { const r = localStorage.getItem(KEY); return r?JSON.parse(r):[] } catch(e){ return [] } }
+    function formatDate(ts){ try { const d = new Date(ts); return d.toLocaleString(); } catch(e){ return '--'; } }
+    function pctFor(entry){
+      if (!entry) return 0;
+      if ((entry.level || 0) >= MAX_LEVEL) return 100;
+      return Math.round(((entry.xp || 0) / XP_PER_LEVEL) * 100);
+    }
+
+    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[m]); }
+
+    function sortList(list){
+      list.sort((a,b)=> {
+        if ((b.level||0) !== (a.level||0)) return (b.level||0) - (a.level||0);
+        if ((b.xp||0) !== (a.xp||0)) return (b.xp||0) - (a.xp||0);
+        return (b.lastLogin||0) - (a.lastLogin||0);
+      });
+      return list;
+    }
+
+    function renderList(list){
+      const tbody = document.querySelector('#leaderTable tbody');
+      tbody.innerHTML = '';
+      sortList(list).forEach((u,i)=>{
+        const tr = document.createElement('tr');
+        const percent = pctFor(u);
+        tr.innerHTML = `<td>${i+1}</td>
+                        <td><strong>${escapeHtml(u.name||'Usuario')}</strong></td>
+                        <td class="small">${escapeHtml(u.email||'--')}</td>
+                        <td><span class="level-badge">N ${u.level||1}</span></td>
+                        <td><span class="pct">${percent}%</span></td>
+                        <td class="small">${u.lastLogin?formatDate(u.lastLogin):'--'}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function fetchFromServer(){
+      try {
+        const resp = await fetch(API, { cache: 'no-store' });
+        if (!resp.ok) throw new Error('server returned ' + resp.status);
+        const json = await resp.json();
+        if (json && json.ok && Array.isArray(json.list)) {
+          // optionally update local cache with server data
+          try { localStorage.setItem(KEY, JSON.stringify(json.list)); } catch(e){}
+          return json.list;
+        }
+        throw new Error('invalid payload');
+      } catch (e) {
+        // fallback to local
+        console.warn('No se pudo obtener leaderboard del servidor, usando localStorage:', e);
+        return null;
+      }
+    }
+
+    async function fetchAndRender(){
+      // intentar servidor primero
+      const serverList = await fetchFromServer();
+      if (serverList && serverList.length) {
+        renderList(serverList);
+      } else {
+        // fallback a localStorage
+        const local = loadListLocal();
+        renderList(local);
+      }
+    }
+
+    document.getElementById('refreshBtn').addEventListener('click', fetchAndRender);
+
+    // render inicial: intenta servidor y si falla usa local
+    fetchAndRender();
+  })();
+  </script>
+</body>
+</html>
