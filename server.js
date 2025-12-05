@@ -131,7 +131,7 @@ app.post('/api/add-question', async (req,res)=>{
     await rooms.updateOne({ roomId: rid }, { $set: { quiz: room.quiz }});
     return res.json({ ok:true, quiz: room.quiz });
   } catch(e){ console.error(e); return res.status(500).json({ ok:false, error:String(e) }); }
-})}}}}}}};/*console/*
+})
 
 /* finish-quiz-creation: creador termina de crear preguntas y cambia status a waiting */
 app.post('/api/finish-quiz-creation', async (req,res)=>{
@@ -627,4 +627,5 @@ app.use(express.static(__dirname));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, ()=> console.log('Server listening on port', PORT));
+
 
